@@ -12,7 +12,6 @@ class FeatureReplacingExistingStage : Feature
 
     protected override void Setup(FeatureConfigurationContext context)
     {
-        context.
         context.RegisterStartupTask(s =>
             new SerializeMessageConnectorEx(
                 s.GetRequiredService<IMessageSerializer>(),
@@ -22,6 +21,5 @@ class FeatureReplacingExistingStage : Feature
         
         var pipeline = context.Pipeline;
         pipeline.Replace("NServiceBus.SerializeMessageConnector", new SerializeMessageConnectorEx());
-        
    }
 }

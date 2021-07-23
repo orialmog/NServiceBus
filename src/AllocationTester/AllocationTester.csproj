@@ -9,4 +9,10 @@
       <ProjectReference Include="..\NServiceBus.Core\NServiceBus.Core.csproj" />
     </ItemGroup>
 
+    <ItemGroup>
+      <Compile Remove="FeatureReplacingExistingStage.cs" />
+      <Compile Remove="SerializeMessageConnectorEx.cs" />
+      <Compile Remove="StreamPool.cs" />
+    </ItemGroup>
+
 </Project>

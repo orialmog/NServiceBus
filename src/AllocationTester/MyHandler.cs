@@ -1,11 +1,9 @@
-﻿// unset
-
-using System.Threading.Tasks;
+﻿using System.Threading.Tasks;
 using NServiceBus;
 
-class MyHandler : IHandleMessages<object>
+class MyHandler : IHandleMessages<MyBusinessMessage>
 {
-    public Task Handle(object message, IMessageHandlerContext context)
+    public Task Handle(MyBusinessMessage message, IMessageHandlerContext context)
     {
         _ = Program.cde.Signal();
         return Task.CompletedTask;

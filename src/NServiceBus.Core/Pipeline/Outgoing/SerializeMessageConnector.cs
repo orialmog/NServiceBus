@@ -1,3 +1,7 @@
+using System;
+using System.Collections.Concurrent;
+using System.IO;
+
 namespace NServiceBus
 {
     using System;
@@ -13,6 +17,7 @@ namespace NServiceBus
     {
         public SerializeMessageConnector(IMessageSerializer messageSerializer, MessageMetadataRegistry messageMetadataRegistry)
         {
+            Console.WriteLine($"Pooling: {pooling}");
             this.messageSerializer = messageSerializer;
             this.messageMetadataRegistry = messageMetadataRegistry;
         }
@@ -35,18 +40,42 @@ namespace NServiceBus
             context.Headers[Headers.ContentType] = messageSerializer.ContentType;
             context.Headers[Headers.EnclosedMessageTypes] = SerializeEnclosedMessageTypes(context.Message.MessageType);
 
-            var array = Serialize(context);
-            await stage(this.CreateOutgoingPhysicalMessageContext(array, context.RoutingStrategies, context)).ConfigureAwait(false);
-        }
-
-        byte[] Serialize(IOutgoingLogicalMessageContext context)
-        {
-            using (var ms = new MemoryStream())
+            if (!pooling)
             {
-                messageSerializer.Serialize(context.Message.Instance, ms);
-                return ms.ToArray();
+                using (var stream = new MemoryStream())
+                {
+                    messageSerializer.Serialize(context.Message.Instance, stream);
+                    if (!stream.TryGetBuffer(out var buffer))
+                    {
+                        throw new InvalidOperationException("Serialization stream buffer could not be acquired.");
+                    }
+                    var body = buffer.AsMemory(0, (int)stream.Position);
+                    await stage(this.CreateOutgoingPhysicalMessageContext(body, context.RoutingStrategies, context))
+                        .ConfigureAwait(false);
+                }
+            }
+            else
+            {
+                var stream = streamPool.Get();
+                try
+                {
+                    messageSerializer.Serialize(context.Message.Instance, stream);
+                    if (!stream.TryGetBuffer(out var buffer))
+                    {
+                        throw new InvalidOperationException("Serialization stream buffer could not be acquired.");
+                    }
+
+                    var body = buffer.AsMemory(0, (int)stream.Position);
+                    await stage(this.CreateOutgoingPhysicalMessageContext(body, context.RoutingStrategies, context)).ConfigureAwait(false);
+                }
+                finally
+                {
+                    streamPool.Return(stream);
+                }
             }
         }
+
+        static readonly bool pooling = true;
 
         string SerializeEnclosedMessageTypes(Type messageType)
         {
@@ -69,7 +98,40 @@ namespace NServiceBus
 
         readonly MessageMetadataRegistry messageMetadataRegistry;
         readonly IMessageSerializer messageSerializer;
+        readonly StreamPool streamPool = new StreamPool();
 
         static readonly ILog log = LogManager.GetLogger<SerializeMessageConnector>();
+    }
+}
+
+class StreamPool
+{
+    readonly ConcurrentBag<MemoryStream> pool = new ConcurrentBag<MemoryStream>();
+    long startCapacity = 128;
+    const int MaxSizeLimit = 1024 * 16; //16KB
+    public MemoryStream Get()
+    {
+        if (pool.TryTake(out MemoryStream stream))
+        {
+            return stream;
+        }
+        return new MemoryStream((int)startCapacity);
+    }
+
+    public void Return(MemoryStream instance)
+    {
+        var position = instance.Position;
+        if (position < MaxSizeLimit)
+        {
+            if (position > startCapacity)
+            {
+                _ = Console.Out.WriteLineAsync($"Increasing startCapacity to {position}");
+                startCapacity = position;
+            }
+
+            instance.Position = 0;
+            pool.Add(instance);
+        }
+        // MemoryStreams do not need to be disposed.
     }
 }
