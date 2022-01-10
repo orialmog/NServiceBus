@@ -2,6 +2,7 @@
 {
     using System;
     using System.Threading.Tasks;
+    using NServiceBus.Extensions.Diagnostics;
     using Pipeline;
     using Sagas;
 
@@ -19,24 +20,27 @@
             // Might as well abort before invoking the handler if we're shutting down
             context.CancellationToken.ThrowIfCancellationRequested();
 
-            var startTime = DateTimeOffset.UtcNow;
-            try
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity(messageHandler.HandlerType.Name))
             {
-                await messageHandler
-                    .Invoke(context.MessageBeingHandled, context)
-                    .ThrowIfNull()
-                    .ConfigureAwait(false);
-            }
+                var startTime = DateTimeOffset.UtcNow;
+                try
+                {
+                    await messageHandler
+                        .Invoke(context.MessageBeingHandled, context)
+                        .ThrowIfNull()
+                        .ConfigureAwait(false);
+                }
 #pragma warning disable PS0019 // Do not catch Exception without considering OperationCanceledException - enriching and rethrowing
-            catch (Exception ex)
+                catch (Exception ex)
 #pragma warning restore PS0019 // Do not catch Exception without considering OperationCanceledException
-            {
-                ex.Data["Message type"] = context.MessageMetadata.MessageType.FullName;
-                ex.Data["Handler type"] = context.MessageHandler.HandlerType.FullName;
-                ex.Data["Handler start time"] = DateTimeOffsetHelper.ToWireFormattedString(startTime);
-                ex.Data["Handler failure time"] = DateTimeOffsetHelper.ToWireFormattedString(DateTimeOffset.UtcNow);
-                ex.Data["Handler canceled"] = context.CancellationToken.IsCancellationRequested;
-                throw;
+                {
+                    ex.Data["Message type"] = context.MessageMetadata.MessageType.FullName;
+                    ex.Data["Handler type"] = context.MessageHandler.HandlerType.FullName;
+                    ex.Data["Handler start time"] = DateTimeOffsetHelper.ToWireFormattedString(startTime);
+                    ex.Data["Handler failure time"] = DateTimeOffsetHelper.ToWireFormattedString(DateTimeOffset.UtcNow);
+                    ex.Data["Handler canceled"] = context.CancellationToken.IsCancellationRequested;
+                    throw;
+                }
             }
         }
     }
