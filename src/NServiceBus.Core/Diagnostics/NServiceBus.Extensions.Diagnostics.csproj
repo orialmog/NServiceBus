@@ -1,0 +1,30 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>netstandard2.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <Features>strict</Features>
+    <PackageTags>nservicebus;messaging;diagnostics</PackageTags>
+    <Authors>Jimmy Bogard</Authors>
+    <Copyright>Jimmy Bogard</Copyright>
+    <Description>
+      This library adds System.Diagnostics support to NServiceBus endpoints. It supports the W3C Trace Context recommendation and Correlation Context draft standards
+      for incoming and outgoing requests. It creates and starts activities for incoming/outgoing requests, and exposes diagnostics events through DiagnosticSource.
+    </Description>
+    <PackageLicenseExpression>Apache-2.0</PackageLicenseExpression>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <IncludeSymbols>true</IncludeSymbols>
+    <SymbolPackageFormat>snupkg</SymbolPackageFormat>
+    <EmbedUntrackedSources>true</EmbedUntrackedSources>
+    <Deterministic>true</Deterministic>
+    <ContinuousIntegrationBuild Condition="'$(GITHUB_ACTIONS)' == 'true'">true</ContinuousIntegrationBuild>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.SourceLink.GitHub" Version="1.0.0" PrivateAssets="All" />
+    <PackageReference Include="MinVer" Version="2.3.1" PrivateAssets="All" />
+    <PackageReference Include="NServiceBus" Version="[7.0,8.0)" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="5.0.0" />
+  </ItemGroup>
+
+</Project>
