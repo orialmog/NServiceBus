@@ -1,14 +1,14 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using NServiceBus.Pipeline;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    public class OutgoingLogicalMessageDiagnostics : Behavior<IOutgoingLogicalMessageContext>
+    using System;
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+    using NServiceBus.Pipeline;
+
+    class OutgoingLogicalMessageDiagnostics : Behavior<IOutgoingLogicalMessageContext>
     {
-        private readonly DiagnosticListener _diagnosticListener;
-        private const string EventName = ActivityNames.OutgoingLogicalMessage + ".Sent";
+        readonly DiagnosticListener _diagnosticListener;
+        const string EventName = ActivityNames.OutgoingLogicalMessage + ".Sent";
 
         public OutgoingLogicalMessageDiagnostics(DiagnosticListener diagnosticListener)
             => _diagnosticListener = diagnosticListener;

@@ -1,20 +1,29 @@
-﻿using System.Diagnostics;
-using NServiceBus.Features;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
+    using NServiceBus.Features;
+
+    /// <summary>
+    /// 
+    /// </summary>
     public class DiagnosticsFeature : Feature
     {
+        /// <summary>
+        /// 
+        /// </summary>
         public DiagnosticsFeature()
         {
-            Defaults(settings => settings.SetDefault<InstrumentationOptions>(new InstrumentationOptions
+            Defaults(settings => settings.SetDefault(new InstrumentationOptions
             {
                 CaptureMessageBody = false
             }));
             EnableByDefault();
         }
 
-        protected override void Setup(FeatureConfigurationContext context)
+        /// <summary>
+        /// 
+        /// </summary>
+        /// <param name="context"></param>
+        protected internal override void Setup(FeatureConfigurationContext context)
         {
             var activityEnricher = new SettingsActivityEnricher(context.Settings);
 

@@ -1,18 +1,18 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.Net.Http.Headers;
-using System.Threading.Tasks;
-using System.Web;
-using NServiceBus.Pipeline;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    public class IncomingPhysicalMessageDiagnostics : Behavior<IIncomingPhysicalMessageContext>
+    using System;
+    using System.Collections.Generic;
+    using System.Diagnostics;
+    using System.Net.Http.Headers;
+    using System.Threading.Tasks;
+    using NServiceBus.Pipeline;
+
+
+    class IncomingPhysicalMessageDiagnostics : Behavior<IIncomingPhysicalMessageContext>
     {
-        private readonly IActivityEnricher _activityEnricher;
-        private readonly DiagnosticListener _diagnosticListener;
-        private const string EventName = ActivityNames.IncomingPhysicalMessage + ".Processed";
+        readonly IActivityEnricher _activityEnricher;
+        readonly DiagnosticListener _diagnosticListener;
+        const string EventName = ActivityNames.IncomingPhysicalMessage + ".Processed";
 
         public IncomingPhysicalMessageDiagnostics(IActivityEnricher activityEnricher)
         {
@@ -35,15 +35,15 @@ namespace NServiceBus.Extensions.Diagnostics
             }
         }
 
-        private Activity? StartActivity(IIncomingPhysicalMessageContext context)
+        Activity StartActivity(IIncomingPhysicalMessageContext context)
         {
             if (!context.MessageHeaders.TryGetValue(Headers.TraceParentHeaderName, out var parentId))
             {
                 context.MessageHeaders.TryGetValue(Headers.RequestIdHeaderName, out parentId);
             }
 
-            string? traceStateString = default;
-            List<KeyValuePair<string, string?>> baggageItems = new();
+            string traceStateString = default;
+            var baggageItems = new List<KeyValuePair<string, string>>();
 
             if (!string.IsNullOrEmpty(parentId))
             {
@@ -62,7 +62,7 @@ namespace NServiceBus.Extensions.Diagnostics
                         {
                             if (NameValueHeaderValue.TryParse(item, out var baggageItem))
                             {
-                                baggageItems.Add(new KeyValuePair<string, string?>(baggageItem.Name, HttpUtility.UrlDecode(baggageItem.Value)));
+                                baggageItems.Add(new KeyValuePair<string, string>(baggageItem.Name, Uri.UnescapeDataString(baggageItem.Value)));
                             }
                         }
                     }

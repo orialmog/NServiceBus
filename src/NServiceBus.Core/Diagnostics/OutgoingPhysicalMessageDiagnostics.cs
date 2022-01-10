@@ -1,16 +1,16 @@
-﻿using System;
-using System.Diagnostics;
-using System.Linq;
-using System.Threading.Tasks;
-using NServiceBus.Pipeline;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    public class OutgoingPhysicalMessageDiagnostics : Behavior<IOutgoingPhysicalMessageContext>
+    using System;
+    using System.Diagnostics;
+    using System.Linq;
+    using System.Threading.Tasks;
+    using NServiceBus.Pipeline;
+
+    class OutgoingPhysicalMessageDiagnostics : Behavior<IOutgoingPhysicalMessageContext>
     {
-        private readonly IActivityEnricher _activityEnricher;
-        private readonly DiagnosticListener _diagnosticListener;
-        private const string EventName = ActivityNames.OutgoingPhysicalMessage + ".Sent";
+        readonly IActivityEnricher _activityEnricher;
+        readonly DiagnosticListener _diagnosticListener;
+        const string EventName = ActivityNames.OutgoingPhysicalMessage + ".Sent";
 
         public OutgoingPhysicalMessageDiagnostics(IActivityEnricher activityEnricher)
         {
@@ -36,7 +36,7 @@ namespace NServiceBus.Extensions.Diagnostics
             }
         }
 
-        private Activity? StartActivity(IOutgoingPhysicalMessageContext context)
+        Activity StartActivity(IOutgoingPhysicalMessageContext context)
         {
             var activity = NServiceBusActivitySource.ActivitySource.StartActivity(ActivityNames.OutgoingPhysicalMessage, ActivityKind.Producer);
 
@@ -50,7 +50,7 @@ namespace NServiceBus.Extensions.Diagnostics
             return activity;
         }
 
-        private static void InjectHeaders(Activity activity, IOutgoingPhysicalMessageContext context)
+        static void InjectHeaders(Activity activity, IOutgoingPhysicalMessageContext context)
         {
             if (activity.IdFormat == ActivityIdFormat.W3C)
             {
@@ -71,8 +71,7 @@ namespace NServiceBus.Extensions.Diagnostics
                 }
             }
 
-            if (!context.Headers.ContainsKey(Headers.CorrelationContextHeaderName) 
-                && !context.Headers.ContainsKey(Headers.BaggageHeaderName))
+            if (!context.Headers.ContainsKey(Headers.CorrelationContextHeaderName) && !context.Headers.ContainsKey(Headers.BaggageHeaderName))
             {
                 var baggage = string.Join(",", activity.Baggage.Select(item => $"{item.Key}={item.Value}"));
                 if (!string.IsNullOrEmpty(baggage))

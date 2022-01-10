@@ -1,6 +1,6 @@
 ﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    internal static class Headers
+    static class Headers
     {
         public const string TraceParentHeaderName = "traceparent";
         public const string TraceStateHeaderName = "tracestate";

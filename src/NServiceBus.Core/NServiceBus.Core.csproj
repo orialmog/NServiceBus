@@ -34,6 +34,8 @@
     <PackageReference Include="Particular.Licensing.Sources" Version="3.7.0-alpha.3" PrivateAssets="All" />
     <PackageReference Include="Particular.Packaging" Version="1.4.0" PrivateAssets="All" />
     <PackageReference Include="SimpleJson" Version="0.38.0" PrivateAssets="All" />
+    <PackageReference Include="System.Diagnostics.DiagnosticSource" Version="6.0.0" />
+    <PackageReference Include="System.Net.Http" Version="4.3.4" />
   </ItemGroup>
 
   <PropertyGroup>
@@ -43,6 +45,7 @@
 
   <ItemGroup>
     <None Include="..\..\packaging\nuget\tools\init.ps1" Pack="true" PackagePath="tools" Visible="false" />
+    <None Include="Diagnostics\NServiceBus.Extensions.Diagnostics.csproj" />
     <None Include="..\NServiceBus.Core.Analyzer\bin\$(Configuration)\**\NServiceBus.Core.Analyzer.dll" Pack="true" PackagePath="analyzers/dotnet/cs/NServiceBus.Core.Analyzer.dll" Link="NServiceBus.Core.Analyzer.dll" Visible="false" />
     <None Include="..\NServiceBus.Core.Analyzer\tools\*.ps1" Pack="true" PackagePath="tools" Visible="false" />
   </ItemGroup>

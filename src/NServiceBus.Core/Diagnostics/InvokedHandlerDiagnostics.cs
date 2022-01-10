@@ -1,14 +1,14 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using NServiceBus.Pipeline;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    public class InvokedHandlerDiagnostics : Behavior<IInvokeHandlerContext>
+    using System;
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+    using NServiceBus.Pipeline;
+
+    class InvokedHandlerDiagnostics : Behavior<IInvokeHandlerContext>
     {
-        private readonly DiagnosticListener _diagnosticListener;
-        private const string EventName = ActivityNames.InvokedHandler + ".Processed";
+        readonly DiagnosticListener _diagnosticListener;
+        const string EventName = ActivityNames.InvokedHandler + ".Processed";
 
         public InvokedHandlerDiagnostics(DiagnosticListener diagnosticListener) => _diagnosticListener = diagnosticListener;
 

@@ -1,14 +1,14 @@
-﻿using System;
-using System.Diagnostics;
-using System.Threading.Tasks;
-using NServiceBus.Pipeline;
-
-namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Extensions.Diagnostics
 {
-    public class IncomingLogicalMessageDiagnostics : Behavior<IIncomingLogicalMessageContext>
+    using System;
+    using System.Diagnostics;
+    using System.Threading.Tasks;
+    using NServiceBus.Pipeline;
+
+    class IncomingLogicalMessageDiagnostics : Behavior<IIncomingLogicalMessageContext>
     {
-        private readonly DiagnosticListener _diagnosticListener;
-        private const string EventName = ActivityNames.IncomingLogicalMessage + ".Processed";
+        readonly DiagnosticListener _diagnosticListener;
+        const string EventName = ActivityNames.IncomingLogicalMessage + ".Processed";
 
         public IncomingLogicalMessageDiagnostics(DiagnosticListener diagnosticListener)
             => _diagnosticListener = diagnosticListener;
