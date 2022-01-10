@@ -24,13 +24,25 @@
             IIncomingPhysicalMessageContext context,
             Func<Task> next)
         {
-            using (StartActivity(context))
+            using (var activity = StartActivity(context))
             {
-                await next().ConfigureAwait(false);
-
-                if (_diagnosticListener.IsEnabled(EventName))
+                try
                 {
-                    _diagnosticListener.Write(EventName, context);
+                    await next().ConfigureAwait(false);
+
+                    if (_diagnosticListener.IsEnabled(EventName))
+                    {
+                        _diagnosticListener.Write(EventName, context);
+                    }
+                }
+                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+                {
+                    throw;
+                }
+                catch
+                {
+                    activity.SetStatus(ActivityStatusCode.Error);
+                    throw;
                 }
             }
         }
