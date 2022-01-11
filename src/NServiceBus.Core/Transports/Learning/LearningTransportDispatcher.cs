@@ -1,5 +1,6 @@
 namespace NServiceBus
 {
+    using NServiceBus.Extensions.Diagnostics;
     using System;
     using System.Collections.Generic;
     using System.IO;
@@ -22,11 +23,15 @@ namespace NServiceBus
             this.maxMessageSizeKB = maxMessageSizeKB;
         }
 
-        public Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
+        public async Task Dispatch(TransportOperations outgoingMessages, TransportTransaction transaction, CancellationToken cancellationToken = default)
         {
-            return Task.WhenAll(
-                DispatchUnicast(outgoingMessages.UnicastTransportOperations, transaction, cancellationToken),
-                DispatchMulticast(outgoingMessages.MulticastTransportOperations, transaction, cancellationToken));
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("Dispatch"))
+            {
+                await Task.WhenAll(
+                    DispatchUnicast(outgoingMessages.UnicastTransportOperations, transaction, cancellationToken),
+                    DispatchMulticast(outgoingMessages.MulticastTransportOperations, transaction, cancellationToken)
+                    );
+            }
         }
 
         async Task DispatchMulticast(IEnumerable<MulticastTransportOperation> transportOperations, TransportTransaction transaction, CancellationToken cancellationToken)

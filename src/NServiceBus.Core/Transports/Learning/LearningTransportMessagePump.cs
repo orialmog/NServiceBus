@@ -2,12 +2,14 @@
 {
     using System;
     using System.Collections.Concurrent;
+    using System.Collections.Generic;
     using System.Diagnostics;
     using System.IO;
     using System.Threading;
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
+    using NServiceBus.Extensions.Diagnostics;
     using Transport;
 
     class LearningTransportMessagePump : IMessageReceiver
@@ -241,6 +243,7 @@
 
         async Task ProcessMessageSwallowExceptionsAndReleaseConcurrencyLimiter(ILearningTransportTransaction transaction, string filePath, string messageId, CancellationToken messageProcessingCancellationToken)
         {
+
             try
             {
                 await ProcessFileAndComplete(transaction, filePath, messageId, messageProcessingCancellationToken).ConfigureAwait(false);
@@ -288,69 +291,55 @@
 
         async Task ProcessFile(ILearningTransportTransaction transaction, string messageId, CancellationToken messageProcessingCancellationToken)
         {
-            var message = await AsyncFile.ReadText(transaction.FileToProcess, messageProcessingCancellationToken).ConfigureAwait(false);
-
-            var bodyPath = Path.Combine(bodyDir, $"{messageId}{BodyFileSuffix}");
-            var headers = HeaderSerializer.Deserialize(message);
-
-            if (headers.TryGetValue(LearningTransportHeaders.TimeToBeReceived, out var ttbrString))
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile"))
             {
-                headers.Remove(LearningTransportHeaders.TimeToBeReceived);
+                string message;
+                byte[] body;
+                Dictionary<string, string> headers;
 
-                var ttbr = TimeSpan.Parse(ttbrString);
-
-                //file.move preserves create time
-                var sentTime = File.GetCreationTimeUtc(transaction.FileToProcess);
-
-                var utcNow = DateTime.UtcNow;
-
-                if (sentTime + ttbr < utcNow)
+                using (NServiceBusActivitySource.ActivitySource.StartActivity("Read"))
                 {
-                    await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
-                    log.InfoFormat("Dropping message '{0}' as the specified TimeToBeReceived of '{1}' expired since sending the message at '{2:O}'. Current UTC time is '{3:O}'", messageId, ttbrString, sentTime, utcNow);
-                    return;
+                    message = await AsyncFile.ReadText(transaction.FileToProcess, messageProcessingCancellationToken).ConfigureAwait(false);
+
+                    var bodyPath = Path.Combine(bodyDir, $"{messageId}{BodyFileSuffix}");
+                    headers = HeaderSerializer.Deserialize(message);
+
+                    if (headers.TryGetValue(LearningTransportHeaders.TimeToBeReceived, out var ttbrString))
+                    {
+                        headers.Remove(LearningTransportHeaders.TimeToBeReceived);
+
+                        var ttbr = TimeSpan.Parse(ttbrString);
+
+                        //file.move preserves create time
+                        var sentTime = File.GetCreationTimeUtc(transaction.FileToProcess);
+
+                        var utcNow = DateTime.UtcNow;
+
+                        if (sentTime + ttbr < utcNow)
+                        {
+                            await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
+                            log.InfoFormat("Dropping message '{0}' as the specified TimeToBeReceived of '{1}' expired since sending the message at '{2:O}'. Current UTC time is '{3:O}'", messageId, ttbrString, sentTime, utcNow);
+                            return;
+                        }
+                    }
+
+                    body = await AsyncFile.ReadBytes(bodyPath, messageProcessingCancellationToken).ConfigureAwait(false);
                 }
-            }
 
-            var body = await AsyncFile.ReadBytes(bodyPath, messageProcessingCancellationToken).ConfigureAwait(false);
+                var transportTransaction = new TransportTransaction();
 
-            var transportTransaction = new TransportTransaction();
+                if (transactionMode == TransportTransactionMode.SendsAtomicWithReceive)
+                {
+                    transportTransaction.Set(transaction);
+                }
 
-            if (transactionMode == TransportTransactionMode.SendsAtomicWithReceive)
-            {
-                transportTransaction.Set(transaction);
-            }
+                var processingContext = new ContextBag();
 
-            var processingContext = new ContextBag();
-
-            var messageContext = new MessageContext(messageId, headers, body, transportTransaction, ReceiveAddress, processingContext);
-
-            try
-            {
-                await onMessage(messageContext, messageProcessingCancellationToken).ConfigureAwait(false);
-            }
-            catch (Exception ex) when (ex.IsCausedBy(messageProcessingCancellationToken))
-            {
-                log.Debug("Message processing canceled. Rolling back transaction.", ex);
-                transaction.Rollback();
-                throw;
-            }
-            catch (Exception exception)
-            {
-                transaction.ClearPendingOutgoingOperations();
-
-                var processingFailures = retryCounts.AddOrUpdate(messageId, id => 1, (id, currentCount) => currentCount + 1);
-
-                headers = HeaderSerializer.Deserialize(message);
-                headers.Remove(LearningTransportHeaders.TimeToBeReceived);
-
-                var errorContext = new ErrorContext(exception, headers, messageId, body, transportTransaction, processingFailures, ReceiveAddress, processingContext);
-
-                ErrorHandleResult result;
+                var messageContext = new MessageContext(messageId, headers, body, transportTransaction, ReceiveAddress, processingContext);
 
                 try
                 {
-                    result = await onError(errorContext, messageProcessingCancellationToken).ConfigureAwait(false);
+                    await onMessage(messageContext, messageProcessingCancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex.IsCausedBy(messageProcessingCancellationToken))
                 {
@@ -358,20 +347,48 @@
                     transaction.Rollback();
                     throw;
                 }
-                catch (Exception ex)
+                catch (Exception exception)
                 {
-                    criticalErrorAction($"Failed to execute recoverability policy for message with native ID: `{messageContext.NativeMessageId}`", ex, messageProcessingCancellationToken);
-                    result = ErrorHandleResult.RetryRequired;
+                    transaction.ClearPendingOutgoingOperations();
+
+                    var processingFailures = retryCounts.AddOrUpdate(messageId, id => 1, (id, currentCount) => currentCount + 1);
+
+                    headers = HeaderSerializer.Deserialize(message);
+                    headers.Remove(LearningTransportHeaders.TimeToBeReceived);
+
+                    var errorContext = new ErrorContext(exception, headers, messageId, body, transportTransaction, processingFailures, ReceiveAddress, processingContext);
+
+                    ErrorHandleResult result;
+
+                    try
+                    {
+                        result = await onError(errorContext, messageProcessingCancellationToken).ConfigureAwait(false);
+                    }
+                    catch (Exception ex) when (ex.IsCausedBy(messageProcessingCancellationToken))
+                    {
+                        log.Debug("Message processing canceled. Rolling back transaction.", ex);
+                        transaction.Rollback();
+                        throw;
+                    }
+                    catch (Exception ex)
+                    {
+                        criticalErrorAction($"Failed to execute recoverability policy for message with native ID: `{messageContext.NativeMessageId}`", ex, messageProcessingCancellationToken);
+                        result = ErrorHandleResult.RetryRequired;
+                    }
+
+                    if (result == ErrorHandleResult.RetryRequired)
+                    {
+                        transaction.Rollback();
+                        return;
+                    }
                 }
 
-                if (result == ErrorHandleResult.RetryRequired)
+                using (NServiceBusActivitySource.ActivitySource.StartActivity("Commit"))
                 {
-                    transaction.Rollback();
-                    return;
+                    await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
                 }
             }
 
-            await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
         }
 
         CancellationTokenSource messagePumpCancellationTokenSource;
