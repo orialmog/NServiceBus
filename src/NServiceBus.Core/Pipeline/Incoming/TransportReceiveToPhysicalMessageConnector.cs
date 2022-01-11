@@ -3,6 +3,7 @@ namespace NServiceBus
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
+    using NServiceBus.Extensions.Diagnostics;
     using Outbox;
     using Pipeline;
     using Routing;
@@ -21,13 +22,20 @@ namespace NServiceBus
             var messageId = context.Message.MessageId;
             var physicalMessageContext = this.CreateIncomingPhysicalMessageContext(context.Message, context);
 
-            var deduplicationEntry = await outboxStorage.Get(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
+            OutboxMessage deduplicationEntry;
+
+            using (NServiceBusActivitySource.ActivitySource.StartActivity("OutboxGet"))
+            {
+                deduplicationEntry = await outboxStorage.Get(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
+            }
+
             var pendingTransportOperations = new PendingTransportOperations();
 
             if (deduplicationEntry == null)
             {
                 physicalMessageContext.Extensions.Set(pendingTransportOperations);
 
+                using (NServiceBusActivitySource.ActivitySource.StartActivity("OutboxStore"))
                 using (var outboxTransaction = await outboxStorage.BeginTransaction(context.Extensions, context.CancellationToken).ConfigureAwait(false))
                 {
                     context.Extensions.Set(outboxTransaction);
@@ -54,7 +62,10 @@ namespace NServiceBus
                 await this.Fork(batchDispatchContext).ConfigureAwait(false);
             }
 
-            await outboxStorage.SetAsDispatched(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
+            using (NServiceBusActivitySource.ActivitySource.StartActivity("OutboxSetAsDispatched"))
+            {
+                await outboxStorage.SetAsDispatched(messageId, context.Extensions, context.CancellationToken).ConfigureAwait(false);
+            }
         }
 
         static void ConvertToPendingOperations(OutboxMessage deduplicationEntry, PendingTransportOperations pendingTransportOperations)
