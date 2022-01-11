@@ -1,5 +1,6 @@
 namespace NServiceBus
 {
+    using NServiceBus.Extensions.Diagnostics;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -12,16 +13,19 @@ namespace NServiceBus
 
         public override async Task Execute(CancellationToken cancellationToken = default)
         {
-            var sagaId = sagaData.Id;
-            var sagaManifest = sagaManifests.GetForEntityType(sagaData.GetType());
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("SaveAction"))
+            {
+                var sagaId = sagaData.Id;
+                var sagaManifest = sagaManifests.GetForEntityType(sagaData.GetType());
 
-            var sagaFile = await SagaStorageFile.Create(sagaId, sagaManifest, cancellationToken)
-                .ConfigureAwait(false);
+                var sagaFile = await SagaStorageFile.Create(sagaId, sagaManifest, cancellationToken)
+                    .ConfigureAwait(false);
 
-            sagaFiles.RegisterSagaFile(sagaFile, sagaId, sagaManifest.SagaEntityType);
+                sagaFiles.RegisterSagaFile(sagaFile, sagaId, sagaManifest.SagaEntityType);
 
-            await sagaFile.Write(sagaData, cancellationToken)
-                .ConfigureAwait(false);
+                await sagaFile.Write(sagaData, cancellationToken)
+                    .ConfigureAwait(false);
+            }
         }
     }
 }

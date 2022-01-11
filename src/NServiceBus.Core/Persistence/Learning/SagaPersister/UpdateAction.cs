@@ -1,5 +1,6 @@
 namespace NServiceBus
 {
+    using NServiceBus.Extensions.Diagnostics;
     using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
@@ -10,11 +11,14 @@ namespace NServiceBus
         {
         }
 
-        public override Task Execute(CancellationToken cancellationToken = default)
+        public override async Task Execute(CancellationToken cancellationToken = default)
         {
-            var sagaFile = GetSagaFile();
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("UpdateAction"))
+            {
+                var sagaFile = GetSagaFile();
 
-            return sagaFile.Write(sagaData, cancellationToken);
+                await sagaFile.Write(sagaData, cancellationToken);
+            }
         }
     }
 }
