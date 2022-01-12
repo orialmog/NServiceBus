@@ -65,104 +65,118 @@ namespace NServiceBus
 
         async Task WriteMessage(string destination, IOutgoingTransportOperation transportOperation, TransportTransaction transaction, CancellationToken cancellationToken)
         {
-            var message = transportOperation.Message;
-
-            var nativeMessageId = Guid.NewGuid().ToString();
-            var destinationPath = Path.Combine(basePath, destination);
-            var bodyDir = Path.Combine(destinationPath, LearningTransportMessagePump.BodyDirName);
-
-            Directory.CreateDirectory(bodyDir);
-
-            var bodyPath = Path.Combine(bodyDir, nativeMessageId) + LearningTransportMessagePump.BodyFileSuffix;
-
-            await AsyncFile.WriteBytes(bodyPath, message.Body, cancellationToken)
-                .ConfigureAwait(false);
-
-            DateTimeOffset? timeToDeliver = null;
-
-            if (transportOperation.Properties.DoNotDeliverBefore != null)
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("WriteMessage"))
             {
-                timeToDeliver = transportOperation.Properties.DoNotDeliverBefore.At.ToUniversalTime();
-            }
-            else if (transportOperation.Properties.DelayDeliveryWith != null)
-            {
-                timeToDeliver = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
-            }
+                var message = transportOperation.Message;
 
-            if (timeToDeliver.HasValue)
-            {
-                // we need to "ceil" the seconds to guarantee that we delay with at least the requested value
-                // since the folder name has only second resolution.
-                if (timeToDeliver.Value.Millisecond > 0)
+                var nativeMessageId = Guid.NewGuid().ToString();
+                var destinationPath = Path.Combine(basePath, destination);
+                var bodyDir = Path.Combine(destinationPath, LearningTransportMessagePump.BodyDirName);
+
+                Directory.CreateDirectory(bodyDir);
+
+                var bodyPath = Path.Combine(bodyDir, nativeMessageId) + LearningTransportMessagePump.BodyFileSuffix;
+
+                if (activity != null)
                 {
-                    timeToDeliver += TimeSpan.FromSeconds(1);
+                    activity.DisplayName +=  " " + bodyPath;
+                    activity.AddTag("bodyPath", bodyPath);
+                    activity.AddTag("nativeMessageId", nativeMessageId);
                 }
 
-                destinationPath = Path.Combine(destinationPath, LearningTransportMessagePump.DelayedDirName, timeToDeliver.Value.ToString("yyyyMMddHHmmss"));
+                await AsyncFile.WriteBytes(bodyPath, message.Body, cancellationToken)
+                    .ConfigureAwait(false);
 
-                Directory.CreateDirectory(destinationPath);
-            }
+                DateTimeOffset? timeToDeliver = null;
 
-            var timeToBeReceived = transportOperation.Properties.DiscardIfNotReceivedBefore;
+                if (transportOperation.Properties.DoNotDeliverBefore != null)
+                {
+                    timeToDeliver = transportOperation.Properties.DoNotDeliverBefore.At.ToUniversalTime();
+                }
+                else if (transportOperation.Properties.DelayDeliveryWith != null)
+                {
+                    timeToDeliver = DateTimeOffset.UtcNow + transportOperation.Properties.DelayDeliveryWith.Delay;
+                }
 
-            if (timeToBeReceived != null && timeToBeReceived.MaxTime < TimeSpan.MaxValue)
-            {
                 if (timeToDeliver.HasValue)
                 {
-                    throw new Exception($"Postponed delivery of messages with TimeToBeReceived set is not supported. Remove the TimeToBeReceived attribute to postpone messages of type '{message.Headers[Headers.EnclosedMessageTypes]}'.");
+                    // we need to "ceil" the seconds to guarantee that we delay with at least the requested value
+                    // since the folder name has only second resolution.
+                    if (timeToDeliver.Value.Millisecond > 0)
+                    {
+                        timeToDeliver += TimeSpan.FromSeconds(1);
+                    }
+
+                    destinationPath = Path.Combine(destinationPath, LearningTransportMessagePump.DelayedDirName, timeToDeliver.Value.ToString("yyyyMMddHHmmss"));
+
+                    Directory.CreateDirectory(destinationPath);
                 }
 
-                message.Headers[LearningTransportHeaders.TimeToBeReceived] = timeToBeReceived.MaxTime.ToString();
-            }
+                var timeToBeReceived = transportOperation.Properties.DiscardIfNotReceivedBefore;
 
-            var messagePath = Path.Combine(destinationPath, nativeMessageId) + ".metadata.txt";
+                if (timeToBeReceived != null && timeToBeReceived.MaxTime < TimeSpan.MaxValue)
+                {
+                    if (timeToDeliver.HasValue)
+                    {
+                        throw new Exception($"Postponed delivery of messages with TimeToBeReceived set is not supported. Remove the TimeToBeReceived attribute to postpone messages of type '{message.Headers[Headers.EnclosedMessageTypes]}'.");
+                    }
 
-            var headerPayload = HeaderSerializer.Serialize(message.Headers);
-            var headerSize = Encoding.UTF8.GetByteCount(headerPayload);
+                    message.Headers[LearningTransportHeaders.TimeToBeReceived] = timeToBeReceived.MaxTime.ToString();
+                }
 
-            if (headerSize + message.Body.Length > maxMessageSizeKB * 1024)
-            {
-                throw new Exception($"The total size of the '{message.Headers[Headers.EnclosedMessageTypes]}' message body ({message.Body.Length} bytes) plus headers ({headerSize} bytes) is larger than {maxMessageSizeKB} KB and will not be supported on some production transports. Consider using the NServiceBus DataBus or the claim check pattern to avoid messages with a large payload. Use 'EndpointConfiguration.UseTransport<LearningTransport>().NoPayloadSizeRestriction()' to disable this check and proceed with the current message size.");
-            }
+                var messagePath = Path.Combine(destinationPath, nativeMessageId) + ".metadata.txt";
 
-            if (transportOperation.RequiredDispatchConsistency != DispatchConsistency.Isolated && transaction.TryGet(out ILearningTransportTransaction directoryBasedTransaction))
-            {
-                await directoryBasedTransaction.Enlist(messagePath, headerPayload, cancellationToken)
-                    .ConfigureAwait(false);
-            }
-            else
-            {
-                // atomic avoids the file being locked when the receiver tries to process it
-                await AsyncFile.WriteTextAtomic(messagePath, headerPayload, cancellationToken)
-                    .ConfigureAwait(false);
+                var headerPayload = HeaderSerializer.Serialize(message.Headers);
+                var headerSize = Encoding.UTF8.GetByteCount(headerPayload);
+
+                if (headerSize + message.Body.Length > maxMessageSizeKB * 1024)
+                {
+                    throw new Exception($"The total size of the '{message.Headers[Headers.EnclosedMessageTypes]}' message body ({message.Body.Length} bytes) plus headers ({headerSize} bytes) is larger than {maxMessageSizeKB} KB and will not be supported on some production transports. Consider using the NServiceBus DataBus or the claim check pattern to avoid messages with a large payload. Use 'EndpointConfiguration.UseTransport<LearningTransport>().NoPayloadSizeRestriction()' to disable this check and proceed with the current message size.");
+                }
+
+                if (transportOperation.RequiredDispatchConsistency != DispatchConsistency.Isolated && transaction.TryGet(out ILearningTransportTransaction directoryBasedTransaction))
+                {
+                    await directoryBasedTransaction.Enlist(messagePath, headerPayload, cancellationToken)
+                        .ConfigureAwait(false);
+                }
+                else
+                {
+                    // atomic avoids the file being locked when the receiver tries to process it
+                    await AsyncFile.WriteTextAtomic(messagePath, headerPayload, cancellationToken)
+                        .ConfigureAwait(false);
+                }
             }
         }
 
         async Task<IEnumerable<string>> GetSubscribersFor(Type messageType, CancellationToken cancellationToken)
         {
-            var subscribers = new HashSet<string>();
-
-            var allEventTypes = GetPotentialEventTypes(messageType);
-
-            foreach (var eventType in allEventTypes)
+            using (NServiceBusActivitySource.ActivitySource.StartActivity("GetSubscribersFor"))
             {
-                var eventDir = Path.Combine(basePath, ".events", eventType.FullName);
 
-                if (!Directory.Exists(eventDir))
+                var subscribers = new HashSet<string>();
+
+                var allEventTypes = GetPotentialEventTypes(messageType);
+
+                foreach (var eventType in allEventTypes)
                 {
-                    continue;
+                    var eventDir = Path.Combine(basePath, ".events", eventType.FullName);
+
+                    if (!Directory.Exists(eventDir))
+                    {
+                        continue;
+                    }
+
+                    foreach (var file in Directory.GetFiles(eventDir))
+                    {
+                        var allText = await AsyncFile.ReadText(file, cancellationToken)
+                            .ConfigureAwait(false);
+
+                        subscribers.Add(allText);
+                    }
                 }
 
-                foreach (var file in Directory.GetFiles(eventDir))
-                {
-                    var allText = await AsyncFile.ReadText(file, cancellationToken)
-                        .ConfigureAwait(false);
-
-                    subscribers.Add(allText);
-                }
+                return subscribers;
             }
-
-            return subscribers;
         }
 
         static IEnumerable<Type> GetPotentialEventTypes(Type messageType)

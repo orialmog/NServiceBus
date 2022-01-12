@@ -293,6 +293,11 @@
         {
             using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile"))
             {
+                if (activity != null)
+                {
+                    activity.DisplayName = "ProcessFile " + transaction.FileToProcess;
+                }
+
                 string message;
                 byte[] body;
                 Dictionary<string, string> headers;
