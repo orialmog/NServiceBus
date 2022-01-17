@@ -291,12 +291,9 @@
 
         async Task ProcessFile(ILearningTransportTransaction transaction, string messageId, CancellationToken messageProcessingCancellationToken)
         {
-            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile"))
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile", ActivityKind.Consumer))
             {
-                if (activity != null)
-                {
-                    activity.DisplayName = "ProcessFile " + transaction.FileToProcess;
-                }
+                activity?.AddTag("file", transaction.FileToProcess);
 
                 string message;
                 byte[] body;

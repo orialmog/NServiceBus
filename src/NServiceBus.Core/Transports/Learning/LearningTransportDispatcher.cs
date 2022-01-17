@@ -79,8 +79,7 @@ namespace NServiceBus
 
                 if (activity != null)
                 {
-                    activity.DisplayName +=  " " + bodyPath;
-                    activity.AddTag("bodyPath", bodyPath);
+                    activity.AddTag("path", bodyPath);
                     activity.AddTag("nativeMessageId", nativeMessageId);
                 }
 
