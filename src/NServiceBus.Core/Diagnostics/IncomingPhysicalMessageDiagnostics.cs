@@ -81,14 +81,18 @@
                 }
             }
 
-            var activity = parentId == null
-                ? NServiceBusActivitySource.ActivitySource.StartActivity(ActivityNames.IncomingPhysicalMessage, ActivityKind.Consumer)
-                : NServiceBusActivitySource.ActivitySource.StartActivity(ActivityNames.IncomingPhysicalMessage, ActivityKind.Consumer, parentId);
+            var activity = NServiceBusActivitySource.ActivitySource.StartActivity(ActivityNames.IncomingPhysicalMessage);//, ActivityKind.Consumer);
 
             if (activity == null)
             {
                 return activity;
             }
+
+            var root = activity;
+
+            while (root.Parent != null) root = root.Parent;
+
+            root.SetParentId(parentId);
 
             activity.TraceStateString = traceStateString;
 
