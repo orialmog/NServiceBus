@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Diagnostics
 {
     static class ActivityNames
     {

@@ -3,7 +3,7 @@ namespace NServiceBus
     using System;
     using System.Collections.Generic;
     using System.Threading.Tasks;
-    using NServiceBus.Extensions.Diagnostics;
+    using NServiceBus.Diagnostics;
     using Outbox;
     using Pipeline;
     using Routing;

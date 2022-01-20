@@ -2,7 +2,7 @@
 {
     using System;
     using System.Threading.Tasks;
-    using NServiceBus.Extensions.Diagnostics;
+    using NServiceBus.Diagnostics;
     using Pipeline;
     using Sagas;
 

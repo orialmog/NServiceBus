@@ -9,7 +9,7 @@
     using System.Threading.Tasks;
     using Extensibility;
     using Logging;
-    using NServiceBus.Extensions.Diagnostics;
+    using NServiceBus.Diagnostics;
     using Transport;
 
     class LearningTransportMessagePump : IMessageReceiver
@@ -264,6 +264,9 @@
 
         async Task ProcessFileAndComplete(ILearningTransportTransaction transaction, string filePath, string messageId, CancellationToken messageProcessingCancellationToken)
         {
+            using var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile", ActivityKind.Consumer);
+            activity?.AddTag("file", transaction.FileToProcess);
+
             try
             {
                 await ProcessFile(transaction, messageId, messageProcessingCancellationToken).ConfigureAwait(false);
@@ -287,47 +290,55 @@
                     log.Debug($"Failure while trying to complete receive transaction for {filePath}({transaction.FileToProcess})", ex);
                 }
             }
+
         }
+
+
 
         async Task ProcessFile(ILearningTransportTransaction transaction, string messageId, CancellationToken messageProcessingCancellationToken)
         {
-            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity("ProcessFile", ActivityKind.Consumer))
+
+            string message;
+            byte[] body;
+            Dictionary<string, string> headers;
+
+            using (NServiceBusActivitySource.ActivitySource.StartActivity("Read"))
             {
-                activity?.AddTag("file", transaction.FileToProcess);
+                message = await AsyncFile.ReadText(transaction.FileToProcess, messageProcessingCancellationToken).ConfigureAwait(false);
 
-                string message;
-                byte[] body;
-                Dictionary<string, string> headers;
+                var bodyPath = Path.Combine(bodyDir, $"{messageId}{BodyFileSuffix}");
+                headers = HeaderSerializer.Deserialize(message);
 
-                using (NServiceBusActivitySource.ActivitySource.StartActivity("Read"))
+                if (headers.TryGetValue(LearningTransportHeaders.TimeToBeReceived, out var ttbrString))
                 {
-                    message = await AsyncFile.ReadText(transaction.FileToProcess, messageProcessingCancellationToken).ConfigureAwait(false);
+                    headers.Remove(LearningTransportHeaders.TimeToBeReceived);
 
-                    var bodyPath = Path.Combine(bodyDir, $"{messageId}{BodyFileSuffix}");
-                    headers = HeaderSerializer.Deserialize(message);
+                    var ttbr = TimeSpan.Parse(ttbrString);
 
-                    if (headers.TryGetValue(LearningTransportHeaders.TimeToBeReceived, out var ttbrString))
+                    //file.move preserves create time
+                    var sentTime = File.GetCreationTimeUtc(transaction.FileToProcess);
+
+                    var utcNow = DateTime.UtcNow;
+
+                    if (sentTime + ttbr < utcNow)
                     {
-                        headers.Remove(LearningTransportHeaders.TimeToBeReceived);
-
-                        var ttbr = TimeSpan.Parse(ttbrString);
-
-                        //file.move preserves create time
-                        var sentTime = File.GetCreationTimeUtc(transaction.FileToProcess);
-
-                        var utcNow = DateTime.UtcNow;
-
-                        if (sentTime + ttbr < utcNow)
-                        {
-                            await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
-                            log.InfoFormat("Dropping message '{0}' as the specified TimeToBeReceived of '{1}' expired since sending the message at '{2:O}'. Current UTC time is '{3:O}'", messageId, ttbrString, sentTime, utcNow);
-                            return;
-                        }
+                        await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
+                        log.InfoFormat("Dropping message '{0}' as the specified TimeToBeReceived of '{1}' expired since sending the message at '{2:O}'. Current UTC time is '{3:O}'", messageId, ttbrString, sentTime, utcNow);
+                        return;
                     }
-
-                    body = await AsyncFile.ReadBytes(bodyPath, messageProcessingCancellationToken).ConfigureAwait(false);
                 }
 
+                body = await AsyncFile.ReadBytes(bodyPath, messageProcessingCancellationToken).ConfigureAwait(false);
+            }
+
+            // Open telemetry parent 
+            if (!headers.TryGetValue(Diagnostics.Headers.TraceParentHeaderName, out var parentId))
+            {
+                headers.TryGetValue(Diagnostics.Headers.RequestIdHeaderName, out parentId);
+            }
+
+            using (var inner = NServiceBusActivitySource.ActivitySource.StartActivity("Process", ActivityKind.Consumer, parentId, links: new ActivityLink[] { new ActivityLink(Activity.Current.Context) }))
+            {
                 var transportTransaction = new TransportTransaction();
 
                 if (transactionMode == TransportTransactionMode.SendsAtomicWithReceive)
@@ -336,7 +347,6 @@
                 }
 
                 var processingContext = new ContextBag();
-
                 var messageContext = new MessageContext(messageId, headers, body, transportTransaction, ReceiveAddress, processingContext);
 
                 try
@@ -384,13 +394,12 @@
                         return;
                     }
                 }
-
-                using (NServiceBusActivitySource.ActivitySource.StartActivity("Commit"))
-                {
-                    await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
-                }
             }
 
+            using (NServiceBusActivitySource.ActivitySource.StartActivity("Commit"))
+            {
+                await transaction.Commit(messageProcessingCancellationToken).ConfigureAwait(false);
+            }
         }
 
         CancellationTokenSource messagePumpCancellationTokenSource;

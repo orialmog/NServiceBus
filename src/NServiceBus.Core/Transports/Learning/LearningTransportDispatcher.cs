@@ -1,6 +1,6 @@
 namespace NServiceBus
 {
-    using NServiceBus.Extensions.Diagnostics;
+    using NServiceBus.Diagnostics;
     using System;
     using System.Collections.Generic;
     using System.IO;

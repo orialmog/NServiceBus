@@ -1,4 +1,4 @@
-﻿namespace NServiceBus.Extensions.Diagnostics
+﻿namespace NServiceBus.Diagnostics
 {
     using System;
     using System.Collections.Generic;
@@ -24,75 +24,72 @@
             IIncomingPhysicalMessageContext context,
             Func<Task> next)
         {
-            using (var activity = StartActivity(context))
-            {
-                try
-                {
-                    await next().ConfigureAwait(false);
+            EnrichActivity(context);
 
-                    if (_diagnosticListener.IsEnabled(EventName))
-                    {
-                        _diagnosticListener.Write(EventName, context);
-                    }
-                }
-                catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            try
+            {
+                await next().ConfigureAwait(false);
+
+                if (_diagnosticListener.IsEnabled(EventName))
                 {
-                    throw;
-                }
-                catch
-                {
-                    activity.SetStatus(ActivityStatusCode.Error);
-                    throw;
+                    _diagnosticListener.Write(EventName, context);
                 }
             }
+            catch (OperationCanceledException) when (context.CancellationToken.IsCancellationRequested)
+            {
+                throw;
+            }
+            catch
+            {
+                Activity.Current?.SetStatus(ActivityStatusCode.Error);
+                throw;
+            }
+
         }
 
-        Activity StartActivity(IIncomingPhysicalMessageContext context)
+        void EnrichActivity(IIncomingPhysicalMessageContext context)
         {
-            if (!context.MessageHeaders.TryGetValue(Headers.TraceParentHeaderName, out var parentId))
+            var activity = Activity.Current;
+
+            if (activity == null)
             {
-                context.MessageHeaders.TryGetValue(Headers.RequestIdHeaderName, out parentId);
+                return;
+            }
+
+            var headers = context.MessageHeaders;
+
+            if (!headers.TryGetValue(Diagnostics.Headers.TraceParentHeaderName, out var parentId))
+            {
+                headers.TryGetValue(Headers.RequestIdHeaderName, out parentId);
             }
 
             string traceStateString = default;
             var baggageItems = new List<KeyValuePair<string, string>>();
 
-            if (!string.IsNullOrEmpty(parentId))
+            if (string.IsNullOrEmpty(parentId))
             {
-                if (context.MessageHeaders.TryGetValue(Headers.TraceStateHeaderName, out var traceState))
-                {
-                    traceStateString = traceState;
-                }
+                return;
+            }
 
-                if (context.MessageHeaders.TryGetValue(Headers.BaggageHeaderName, out var baggageValue)
-                   || context.MessageHeaders.TryGetValue(Headers.CorrelationContextHeaderName, out baggageValue))
+            if (headers.TryGetValue(Headers.TraceStateHeaderName, out var traceState))
+            {
+                traceStateString = traceState;
+            }
+
+            if (headers.TryGetValue(Headers.BaggageHeaderName, out var baggageValue) || headers.TryGetValue(Headers.CorrelationContextHeaderName, out baggageValue))
+            {
+                var baggage = baggageValue.Split(',');
+                if (baggage.Length > 0)
                 {
-                    var baggage = baggageValue.Split(',');
-                    if (baggage.Length > 0)
+                    foreach (var item in baggage)
                     {
-                        foreach (var item in baggage)
+                        if (NameValueHeaderValue.TryParse(item, out var baggageItem))
                         {
-                            if (NameValueHeaderValue.TryParse(item, out var baggageItem))
-                            {
-                                baggageItems.Add(new KeyValuePair<string, string>(baggageItem.Name, Uri.UnescapeDataString(baggageItem.Value)));
-                            }
+                            baggageItems.Add(new KeyValuePair<string, string>(baggageItem.Name, Uri.UnescapeDataString(baggageItem.Value)));
                         }
                     }
                 }
             }
-
-            var activity = NServiceBusActivitySource.ActivitySource.StartActivity(ActivityNames.IncomingPhysicalMessage);//, ActivityKind.Consumer);
-
-            if (activity == null)
-            {
-                return activity;
-            }
-
-            var root = activity;
-
-            while (root.Parent != null) root = root.Parent;
-
-            root.SetParentId(parentId);
 
             activity.TraceStateString = traceStateString;
 
@@ -102,8 +99,6 @@
             {
                 activity.AddBaggage(baggageItem.Key, baggageItem.Value);
             }
-
-            return activity;
         }
     }
 }
