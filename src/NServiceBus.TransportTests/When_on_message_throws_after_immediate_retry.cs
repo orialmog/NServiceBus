@@ -19,8 +19,8 @@
             var maxAttemptsReached = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (_, __) => throw new Exception($"Simulated exception {++attempts}"),
-                (context, _) =>
+                (_, __, ___) => throw new Exception($"Simulated exception {++attempts}"),
+                (context, _, __) =>
                 {
                     if (attempts == maxAttempts)
                     {

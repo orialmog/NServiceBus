@@ -20,13 +20,13 @@
             var pumpStopping = CreateTaskCompletionSource();
 
             await StartPump(
-                async (_, cancellationToken) =>
+                async (_, __, cancellationToken) =>
                 {
                     onMessageStarted.SetResult();
                     await pumpStopping.Task;
                     onMessageToken = cancellationToken;
                 },
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 transactionMode);
 
             await SendMessage(InputQueueName);

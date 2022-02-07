@@ -46,7 +46,7 @@
                 ReceiveAddress = settings.ReceiveAddress.ToString();
             }
 
-            public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
+            public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default)
             {
                 pushSettings = limitations;
                 return Task.CompletedTask;

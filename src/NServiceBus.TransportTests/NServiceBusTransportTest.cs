@@ -77,7 +77,7 @@
             testCancellationTokenSource?.Dispose();
         }
 
-        protected async Task StartPump(OnMessage onMessage, OnError onError, TransportTransactionMode transactionMode, Action<string, Exception, CancellationToken> onCriticalError = null, CancellationToken cancellationToken = default)
+        protected async Task StartPump(OnMessage onMessage, OnError onError, TransportTransactionMode transactionMode, Action<string, Exception, CancellationToken> onCriticalError = null, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default)
         {
             onMessage = onMessage ?? throw new ArgumentNullException(nameof(onMessage));
             onError = onError ?? throw new ArgumentNullException(nameof(onError));
@@ -114,10 +114,12 @@
 
             await receiver.Initialize(
                 new PushRuntimeSettings(8),
-                (context, token) =>
-                    context.Headers.Contains(TestIdHeaderName, testId) ? onMessage(context, token) : Task.CompletedTask,
-                (context, token) =>
-                    context.Message.Headers.Contains(TestIdHeaderName, testId) ? onError(context, token) : Task.FromResult(ErrorHandleResult.Handled),
+                (context, state, token) =>
+                    context.Headers.Contains(TestIdHeaderName, testId) ? onMessage(context, state, token) : Task.CompletedTask,
+                (context, state, token) =>
+                    context.Message.Headers.Contains(TestIdHeaderName, testId) ? onError(context, state, token) : Task.FromResult(ErrorHandleResult.Handled),
+                onMessageState,
+                onErrorState,
                 cancellationToken);
 
             await receiver.StartReceive(cancellationToken);

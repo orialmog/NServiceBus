@@ -17,7 +17,7 @@
             var messageEmitted = CreateTaskCompletionSource();
 
             await StartPump(
-                async (context, cancellationToken) =>
+                async (context, state, cancellationToken) =>
                 {
                     if (context.Headers.ContainsKey("IsolatedSend"))
                     {
@@ -34,7 +34,7 @@
 
                     throw new Exception("Simulated exception");
                 },
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 transactionMode);
 
             await SendMessage(InputQueueName);

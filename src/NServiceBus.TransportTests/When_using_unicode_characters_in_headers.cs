@@ -13,8 +13,8 @@
             var messageProcessed = CreateTaskCompletionSource<MessageContext>();
 
             await StartPump(
-                (context, _) => messageProcessed.SetCompleted(context),
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (context, _, __) => messageProcessed.SetCompleted(context),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 TransportTransactionMode.None);
 
             var headers = new Dictionary<string, string>

@@ -51,10 +51,12 @@
             delayedMessagePoller = new DelayedMessagePoller(messagePumpBasePath, delayedDir);
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default)
         {
             this.onMessage = onMessage;
+            this.onMessageState = onMessageState;
             this.onError = onError;
+            this.onErrorState = onErrorState;
 
             Init();
 
@@ -116,7 +118,7 @@
         public async Task ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken = default)
         {
             await StopReceive(cancellationToken).ConfigureAwait(false);
-            await Initialize(limitations, onMessage, onError, cancellationToken).ConfigureAwait(false);
+            await Initialize(limitations, onMessage, onError, onMessageState, onErrorState, cancellationToken).ConfigureAwait(false);
             await StartReceive(cancellationToken).ConfigureAwait(false);
         }
 
@@ -334,7 +336,7 @@
 
             try
             {
-                await onMessage(messageContext, messageProcessingCancellationToken).ConfigureAwait(false);
+                await onMessage(messageContext, onMessageState, messageProcessingCancellationToken).ConfigureAwait(false);
             }
             catch (Exception ex) when (ex.IsCausedBy(messageProcessingCancellationToken))
             {
@@ -357,7 +359,7 @@
 
                 try
                 {
-                    result = await onError(errorContext, messageProcessingCancellationToken).ConfigureAwait(false);
+                    result = await onError(errorContext, onErrorState, messageProcessingCancellationToken).ConfigureAwait(false);
                 }
                 catch (Exception ex) when (ex.IsCausedBy(messageProcessingCancellationToken))
                 {
@@ -393,7 +395,9 @@
         string committedTransactionDir;
         string delayedDir;
         OnMessage onMessage;
+        object onMessageState;
         OnError onError;
+        object onErrorState;
 
         readonly ConcurrentDictionary<string, int> retryCounts = new ConcurrentDictionary<string, int>();
         readonly string basePath;

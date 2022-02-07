@@ -18,7 +18,7 @@
             var wasCanceled = CreateTaskCompletionSource<bool>();
 
             await StartPump(
-                async (_, cancellationToken) =>
+                async (_, __, cancellationToken) =>
                 {
                     started.SetResult();
 
@@ -34,7 +34,7 @@
 
                     wasCanceled.SetResult(false);
                 },
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 transactionMode);
 
             await SendMessage(InputQueueName);

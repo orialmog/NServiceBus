@@ -11,7 +11,7 @@
         /// <summary>
         /// Initializes the receiver.
         /// </summary>
-        Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default);
+        Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default);
 
         /// <summary>
         /// Starts receiving messages from the input queue.
@@ -47,10 +47,10 @@
     /// <summary>
     /// Processes an incoming message.
     /// </summary>
-    public delegate Task OnMessage(MessageContext messageContext, CancellationToken cancellationToken = default);
+    public delegate Task OnMessage(MessageContext messageContext, object state = default, CancellationToken cancellationToken = default);
 
     /// <summary>
     /// Processes a message that has failed processing.
     /// </summary>
-    public delegate Task<ErrorHandleResult> OnError(ErrorContext errorContext, CancellationToken cancellationToken = default);
+    public delegate Task<ErrorHandleResult> OnError(ErrorContext errorContext, object state = default, CancellationToken cancellationToken = default);
 }

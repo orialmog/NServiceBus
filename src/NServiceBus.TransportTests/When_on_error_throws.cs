@@ -24,7 +24,7 @@
             var retrying = false;
 
             await StartPump(
-                (context, _) =>
+                (context, _, __) =>
                 {
                     if (retrying)
                     {
@@ -35,7 +35,7 @@
 
                     throw new Exception("Exception from onMessage");
                 },
-                (_, __) =>
+                (_, __, ___) =>
                 {
                     retrying = true;
                     throw exceptionFromOnError;

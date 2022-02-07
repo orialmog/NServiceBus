@@ -17,12 +17,12 @@
             var secondFailure = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (_, __) =>
+                (_, __, ___) =>
                 {
                     Transaction.Current.EnlistDurable(EnlistmentWhichFailsDuringPrepare.Id, new EnlistmentWhichFailsDuringPrepare(), EnlistmentOptions.None);
                     return Task.CompletedTask;
                 },
-                (context, _) =>
+                (context, _, __) =>
                 {
                     //perform an immediate retry to make sure the transport increments the counter properly
                     if (context.ImmediateProcessingFailures < 2)

@@ -17,8 +17,8 @@
             var sendingDelayedMessage = false;
 
             await StartPump(
-                (_, __) => throw new Exception("Simulated exception"),
-                async (context, cancellationToken) =>
+                (_, __, ___) => throw new Exception("Simulated exception"),
+                async (context, _, cancellationToken) =>
                 {
                     if (!sendingDelayedMessage)
                     {

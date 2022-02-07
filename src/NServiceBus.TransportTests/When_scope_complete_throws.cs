@@ -17,13 +17,13 @@
             var onErrorCalled = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (_, __) =>
+                (_, __, ___) =>
                 {
                     // handler enlists a failing transaction enlistment to the DTC transaction which will fail when committing the transaction.
                     Transaction.Current.EnlistDurable(EnlistmentWhichFailsDuringPrepare.Id, new EnlistmentWhichFailsDuringPrepare(), EnlistmentOptions.None);
                     return Task.CompletedTask;
                 },
-                (context, _) =>
+                (context, _, __) =>
                 {
                     onErrorCalled.SetResult(context);
                     return Task.FromResult(ErrorHandleResult.Handled);

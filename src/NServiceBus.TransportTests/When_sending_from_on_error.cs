@@ -17,8 +17,8 @@ namespace NServiceBus.TransportTests
             var messageDispatched = CreateTaskCompletionSource();
 
             await StartPump(
-                (context, _) => context.Headers.ContainsKey("FromOnError") ? messageDispatched.SetCompleted() : throw new Exception("Simulated exception"),
-                async (context, cancellationToken) =>
+                (context, _, __) => context.Headers.ContainsKey("FromOnError") ? messageDispatched.SetCompleted() : throw new Exception("Simulated exception"),
+                async (context, _, cancellationToken) =>
                 {
                     await SendMessage(InputQueueName, new Dictionary<string, string> { { "FromOnError", "true" } }, context.TransportTransaction, cancellationToken: cancellationToken);
                     return ErrorHandleResult.Handled;

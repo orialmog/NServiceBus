@@ -18,8 +18,8 @@
             var retrying = false;
 
             await StartPump(
-                (context, _) => retrying ? retried.SetCompleted(context) : throw new Exception(),
-                (context, _) =>
+                (context, _, __) => retrying ? retried.SetCompleted(context) : throw new Exception(),
+                (context, _, __) =>
                 {
                     retrying = true;
                     context.Message.Headers["test-header"] = "modified";

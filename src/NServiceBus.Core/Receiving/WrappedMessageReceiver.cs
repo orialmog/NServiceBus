@@ -14,27 +14,25 @@
             this.consecutiveFailuresConfiguration = consecutiveFailuresConfiguration;
         }
 
-        public async Task WrappedInvoke(MessageContext messageContext, CancellationToken cancellationToken = default)
+        public async Task WrappedInvoke(MessageContext messageContext, object state = default, CancellationToken cancellationToken = default)
         {
-            await wrappedOnMessage(messageContext, cancellationToken).ConfigureAwait(false);
+            await wrappedOnMessage(messageContext, state, cancellationToken).ConfigureAwait(false);
             await consecutiveFailuresCircuitBreaker.Success(cancellationToken).ConfigureAwait(false);
         }
 
-        public async Task<ErrorHandleResult> WrappedOnError(ErrorContext errorContext, CancellationToken cancellationToken = default)
+        public async Task<ErrorHandleResult> WrappedOnError(ErrorContext errorContext, object state, CancellationToken cancellationToken = default)
         {
             await consecutiveFailuresCircuitBreaker.Failure(cancellationToken).ConfigureAwait(false);
 
-            return await wrappedOnError(errorContext, cancellationToken).ConfigureAwait(false);
+            return await wrappedOnError(errorContext, state, cancellationToken).ConfigureAwait(false);
         }
 
         public ISubscriptionManager Subscriptions => baseReceiver.Subscriptions;
         public string Id => baseReceiver.Id;
         public string ReceiveAddress => baseReceiver.ReceiveAddress;
 
-        public Task ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken = default)
-        {
-            return baseReceiver.ChangeConcurrency(limitations, cancellationToken);
-        }
+        public Task ChangeConcurrency(PushRuntimeSettings limitations, CancellationToken cancellationToken = default) =>
+            baseReceiver.ChangeConcurrency(limitations, cancellationToken);
 
         public Task StartReceive(CancellationToken cancellationToken = default)
         {
@@ -63,7 +61,7 @@
             await baseReceiver.StopReceive(cancellationToken).ConfigureAwait(false);
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default)
         {
             wrappedOnMessage = onMessage;
             wrappedOnError = onError;
@@ -79,7 +77,7 @@
                 return Task.CompletedTask;
             });
 
-            return baseReceiver.Initialize(originalLimitations, WrappedInvoke, WrappedOnError, cancellationToken);
+            return baseReceiver.Initialize(originalLimitations, WrappedInvoke, WrappedOnError, onMessageState, onErrorState, cancellationToken);
         }
 
         async Task RateLimitLoop(CancellationToken cancellationToken)

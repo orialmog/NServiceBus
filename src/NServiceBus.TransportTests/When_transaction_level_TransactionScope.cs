@@ -16,13 +16,13 @@
             var messageProcessed = CreateTaskCompletionSource();
 
             await StartPump(
-                (context, _) =>
+                (context, _, __) =>
                 {
                     currentTransaction = Transaction.Current;
                     contextTransaction = context.TransportTransaction.Get<Transaction>();
                     return messageProcessed.SetCompleted();
                 },
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 transactionMode);
 
             await SendMessage(InputQueueName);

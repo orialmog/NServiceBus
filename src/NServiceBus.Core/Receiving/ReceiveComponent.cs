@@ -164,8 +164,13 @@ namespace NServiceBus
             var recoverability = recoverabilityExecutorFactory
                 .CreateDefault();
 
-            await mainPump.Initialize(configuration.PushRuntimeSettings, mainPipelineExecutor.Invoke,
-                recoverability.Invoke, cancellationToken).ConfigureAwait(false);
+            await mainPump.Initialize(
+                configuration.PushRuntimeSettings,
+                (ctx, state, token) => ((MainPipelineExecutor)state).Invoke(ctx, token),
+                (ctx, state, token) => ((RecoverabilityExecutor)state).Invoke(ctx, token),
+                mainPipelineExecutor,
+                recoverability,
+                cancellationToken).ConfigureAwait(false);
             receivers.Add(mainPump);
 
             if (transportInfrastructure.Receivers.TryGetValue(InstanceSpecificReceiverId, out var instanceSpecificPump))
@@ -173,22 +178,34 @@ namespace NServiceBus
                 var instancePump = CreateReceiver(consecutiveFailuresConfiguration, instanceSpecificPump);
                 var instanceSpecificRecoverabilityExecutor = recoverabilityExecutorFactory.CreateDefault();
 
-                await instancePump.Initialize(configuration.PushRuntimeSettings, mainPipelineExecutor.Invoke,
-                    instanceSpecificRecoverabilityExecutor.Invoke, cancellationToken).ConfigureAwait(false);
+                await instancePump.Initialize(
+                    configuration.PushRuntimeSettings,
+                    (ctx, state, token) => ((MainPipelineExecutor)state).Invoke(ctx, token),
+                    (ctx, state, token) => ((RecoverabilityExecutor)state).Invoke(ctx, token),
+                    mainPipelineExecutor,
+                    instanceSpecificRecoverabilityExecutor,
+                    cancellationToken).ConfigureAwait(false);
 
                 receivers.Add(instancePump);
             }
 
             foreach (var satellite in configuration.SatelliteDefinitions)
             {
+#pragma warning disable PS0021
                 try
+#pragma warning restore PS0021
                 {
                     var satellitePump = CreateReceiver(consecutiveFailuresConfiguration, transportInfrastructure.Receivers[satellite.Name]);
                     var satellitePipeline = new SatellitePipelineExecutor(builder, satellite);
                     var satelliteRecoverabilityExecutor = recoverabilityExecutorFactory.Create(satellite.RecoverabilityPolicy);
 
-                    await satellitePump.Initialize(satellite.RuntimeSettings, satellitePipeline.Invoke,
-                        satelliteRecoverabilityExecutor.Invoke, cancellationToken).ConfigureAwait(false);
+                    await satellitePump.Initialize(
+                        satellite.RuntimeSettings,
+                        (ctx, state, token) => ((SatellitePipelineExecutor)state).Invoke(ctx, token),
+                        (ctx, state, token) => ((RecoverabilityExecutor)state).Invoke(ctx, token),
+                        satellitePipeline,
+                        satelliteRecoverabilityExecutor,
+                        cancellationToken).ConfigureAwait(false);
                     receivers.Add(satellitePump);
                 }
                 catch (Exception ex) when (!ex.IsCausedBy(cancellationToken))

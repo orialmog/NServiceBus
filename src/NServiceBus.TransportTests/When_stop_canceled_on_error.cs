@@ -19,8 +19,8 @@
             var onErrorStarted = CreateTaskCompletionSource();
 
             await StartPump(
-                (_, __) => throw new Exception(),
-                async (_, cancellationToken) =>
+                (_, __, ___) => throw new Exception(),
+                async (_, __, cancellationToken) =>
                 {
                     onErrorStarted.SetResult();
 

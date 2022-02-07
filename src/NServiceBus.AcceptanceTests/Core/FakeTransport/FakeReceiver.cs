@@ -23,7 +23,7 @@ namespace NServiceBus.AcceptanceTests.Core.FakeTransport
             ReceiveAddress = receiveAddress;
         }
 
-        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, CancellationToken cancellationToken = default)
+        public Task Initialize(PushRuntimeSettings limitations, OnMessage onMessage, OnError onError, object onMessageState = default, object onErrorState = default, CancellationToken cancellationToken = default)
         {
             startupSequence.Add($"{nameof(IMessageReceiver)}.{nameof(Initialize)} for receiver {Id}");
             return Task.CompletedTask;

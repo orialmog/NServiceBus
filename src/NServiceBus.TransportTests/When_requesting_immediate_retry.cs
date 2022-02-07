@@ -18,8 +18,8 @@ namespace NServiceBus.TransportTests
             var retrying = false;
 
             await StartPump(
-                (_, __) => retrying ? retried.SetCompleted() : throw new Exception("Simulated exception"),
-                (_, __) =>
+                (_, __, ___) => retrying ? retried.SetCompleted() : throw new Exception("Simulated exception"),
+                (_, __, ___) =>
                 {
                     retrying = true;
                     return Task.FromResult(ErrorHandleResult.RetryRequired);

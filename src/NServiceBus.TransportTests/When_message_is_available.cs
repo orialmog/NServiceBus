@@ -18,12 +18,12 @@ namespace NServiceBus.TransportTests
             byte[] messageBody = null;
 
             await StartPump(
-                (context, _) =>
+                (context, _, ___) =>
                 {
                     messageBody = context.Body.ToArray();
                     return onMessageInvoked.SetCompleted(context);
                 },
-                (_, __) => Task.FromResult(ErrorHandleResult.Handled),
+                (_, __, ___) => Task.FromResult(ErrorHandleResult.Handled),
                 transactionMode);
 
             await SendMessage(InputQueueName, new Dictionary<string, string> { { "MyHeader", "MyValue" } }, body: new byte[] { 1, 2, 3 });

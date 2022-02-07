@@ -18,7 +18,7 @@
             var retrying = false;
 
             await StartPump(
-                (context, _) =>
+                (context, _, __) =>
                 {
                     if (retrying)
                     {
@@ -28,7 +28,7 @@
                     context.Headers["test-header"] = "modified";
                     throw new Exception();
                 },
-                (context, _) =>
+                (context, _, __) =>
                 {
                     retrying = true;
                     return Task.FromResult(ErrorHandleResult.RetryRequired);

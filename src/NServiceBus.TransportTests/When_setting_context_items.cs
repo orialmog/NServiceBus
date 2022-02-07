@@ -16,12 +16,12 @@ namespace NServiceBus.TransportTests
             var onError = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (context, _) =>
+                (context, _, __) =>
                 {
                     context.Extensions.Set("MyKey", "MyValue");
                     throw new Exception("Simulated exception");
                 },
-                (context, _) =>
+                (context, _, __) =>
                 {
                     onError.SetResult(context);
                     return Task.FromResult(ErrorHandleResult.Handled);

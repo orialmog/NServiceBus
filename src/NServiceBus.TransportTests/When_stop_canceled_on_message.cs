@@ -18,12 +18,12 @@
             var onMessageStarted = CreateTaskCompletionSource();
 
             await StartPump(
-                async (_, cancellationToken) =>
+                async (_, __, cancellationToken) =>
                 {
                     onMessageStarted.SetResult();
                     await Task.Delay(TestTimeout, cancellationToken);
                 },
-                (_, __) =>
+                (_, __, ___) =>
                 {
                     recoverabilityInvoked = true;
                     return Task.FromResult(ErrorHandleResult.Handled);

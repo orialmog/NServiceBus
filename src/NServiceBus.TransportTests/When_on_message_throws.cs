@@ -17,8 +17,8 @@ namespace NServiceBus.TransportTests
             var onErrorCalled = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (_, __) => throw new Exception("Simulated exception"),
-                (context, _) =>
+                (_, __, ___) => throw new Exception("Simulated exception"),
+                (context, _, __) =>
                 {
                     onErrorCalled.SetResult(context);
                     return Task.FromResult(ErrorHandleResult.Handled);

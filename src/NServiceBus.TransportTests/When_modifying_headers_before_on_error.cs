@@ -17,12 +17,12 @@
             var errorHandled = CreateTaskCompletionSource<ErrorContext>();
 
             await StartPump(
-                (context, _) =>
+                (context, _, __) =>
                 {
                     context.Headers["test-header"] = "modified";
                     throw new Exception();
                 },
-                (context, __) =>
+                (context, __, ___) =>
                 {
                     errorHandled.SetResult(context);
                     return Task.FromResult(ErrorHandleResult.Handled);
