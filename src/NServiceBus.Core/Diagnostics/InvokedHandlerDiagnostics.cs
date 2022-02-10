@@ -18,11 +18,15 @@
 
         public override async Task Invoke(IInvokeHandlerContext context, Func<Task> next)
         {
-            await next().ConfigureAwait(false);
-
-            if (_diagnosticListener.IsEnabled(EventName))
+            var messageHandler = context.MessageHandler;
+            using (var activity = NServiceBusActivitySource.ActivitySource.StartActivity(messageHandler.HandlerType.Name))
             {
-                _diagnosticListener.Write(EventName, context);
+                await next().ConfigureAwait(false);
+
+                if (_diagnosticListener.IsEnabled(EventName))
+                {
+                    _diagnosticListener.Write(EventName, context);
+                }
             }
         }
     }
