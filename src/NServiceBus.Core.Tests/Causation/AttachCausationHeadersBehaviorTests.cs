@@ -99,6 +99,29 @@
             Assert.AreEqual("the message id", context.Headers[Headers.RelatedTo]);
         }
 
+        [Test]
+        public async Task Should_propagate_headers_with_pattern_from_incoming_message_to_outgoing_message()
+        {
+            //var incomingConversationId = Guid.NewGuid().ToString();
+            var incomingInfoMsmq = "Some MSMQ transport routing information";
+            var incomingInfoRabbitMq = "Some RabbitMQ transport routing information";
+
+            var behavior = new AttachCausationHeadersBehavior(ReturnDefaultConversationId);
+            var context = new TestableOutgoingLogicalMessageContext();
+
+            var transportMessage = new IncomingMessage("xyz", new Dictionary<string, string>
+            {
+                {"NServiceBus.MultiRoute.MSMQ", incomingInfoMsmq},
+                {"NServiceBus.MultiRoute.RabbitMQ", incomingInfoRabbitMq}
+            }, new byte[0]);
+            context.Extensions.Set(transportMessage);
+
+            await behavior.Invoke(context, ctx => Task.CompletedTask);
+
+            Assert.AreEqual(incomingInfoMsmq, context.Headers["NServiceBus.MultiRoute.MSMQ"]);
+            Assert.AreEqual(incomingInfoRabbitMq, context.Headers["NServiceBus.MultiRoute.RabbitMQ"]);
+        }
+
         string ReturnDefaultConversationId(IOutgoingLogicalMessageContext context)
         {
             return ConversationId.Default.Value;

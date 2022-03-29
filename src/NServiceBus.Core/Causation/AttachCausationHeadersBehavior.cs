@@ -18,6 +18,7 @@ namespace NServiceBus
 
             SetRelatedToHeader(context, incomingMessage);
             SetConversationIdHeader(context, incomingMessage);
+            SetMultiTransportHeaders(context, incomingMessage);
 
             return next(context);
         }
@@ -69,6 +70,22 @@ namespace NServiceBus
             }
 
             context.Headers[Headers.ConversationId] = conversationIdStrategy(context);
+        }
+
+        void SetMultiTransportHeaders(IOutgoingLogicalMessageContext context, IncomingMessage incomingMessage)
+        {
+            if (incomingMessage == null)
+            {
+                return;
+            }
+
+            foreach (var header in incomingMessage.Headers)
+            {
+                if (header.Key.Contains("NServiceBus.MultiRoute"))
+                {
+                    context.Headers[header.Key.ToString()] = header.Value;
+                }
+            }
         }
 
         readonly Func<IOutgoingLogicalMessageContext, string> conversationIdStrategy;
