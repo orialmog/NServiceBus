@@ -6,7 +6,7 @@
     /// <summary>
     /// Extension methods to configure data bus.
     /// </summary>
-    public static class UseDataBusExtensions
+    public static partial class UseDataBusExtensions
     {
         /// <summary>
         /// Configures NServiceBus to use the given data bus definition.
@@ -59,37 +59,6 @@
             config.EnableFeature<Features.DataBus>();
 
             return new DataBusExtensions(config.Settings);
-        }
-
-        /// <summary>
-        /// Configures NServiceBus to use the given data bus definition.
-        /// </summary>
-        /// <param name="config">The <see cref="EndpointConfiguration" /> instance to apply the settings to.</param>
-        [ObsoleteEx(
-            Message = "Specifying data bus serializer is mandatory. Use the overload that acceptes a data bus serializer type.",
-            TreatAsErrorFromVersion = "9.0",
-            RemoveInVersion = "10.0")]
-        public static DataBusExtensions<T> UseDataBus<T>(this EndpointConfiguration config) where T : DataBusDefinition, new()
-        {
-            Guard.AgainstNull(nameof(config), config);
-
-            return config.UseDataBus<T, BinaryFormatterDataBusSerializer>();
-        }
-
-        /// <summary>
-        /// Configures NServiceBus to use a custom <see cref="IDataBus" /> implementation.
-        /// </summary>
-        /// <param name="config">The <see cref="EndpointConfiguration" /> instance to apply the settings to.</param>
-        /// <param name="dataBusType">The <see cref="IDataBus" /> <see cref="Type" /> to use.</param>
-        [ObsoleteEx(
-            Message = "Specifying data bus serializer is mandatory. Use the overload that acceptes a data bus serializer type.",
-            TreatAsErrorFromVersion = "9.0",
-            RemoveInVersion = "10.0")]
-        public static DataBusExtensions UseDataBus(this EndpointConfiguration config, Type dataBusType)
-        {
-            Guard.AgainstNull(nameof(config), config);
-
-            return config.UseDataBus(dataBusType, typeof(BinaryFormatterDataBusSerializer));
         }
     }
 }
