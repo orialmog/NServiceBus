@@ -86,7 +86,11 @@
 
         public class Registration : RegisterStep
         {
-            public Registration(Conventions conventions) : base("DataBusSend", typeof(DataBusSendBehavior), "Saves the payload into the shared location", b => new DataBusSendBehavior(b.GetRequiredService<IDataBus>(), b.GetRequiredService<IDataBusSerializer>(), conventions))
+            public Registration(Conventions conventions) : base(
+                "DataBusSend",
+                typeof(DataBusSendBehavior),
+                "Saves the payload into the shared location",
+                b => new DataBusSendBehavior(b.GetRequiredService<IDataBus>(), b.GetRequiredService<IDataBusSerializer>(), conventions))
             {
                 InsertAfter("MutateOutgoingMessages");
                 InsertAfter("ApplyTimeToBeReceived");

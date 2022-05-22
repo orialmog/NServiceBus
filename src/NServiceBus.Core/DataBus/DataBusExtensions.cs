@@ -1,5 +1,7 @@
 ﻿namespace NServiceBus.DataBus
 {
+    using System;
+    using System.Collections.Generic;
     using Configuration.AdvancedExtensibility;
     using Settings;
 
@@ -29,6 +31,32 @@
         public DataBusExtensions(SettingsHolder settings)
             : base(settings)
         {
+        }
+
+        /// <summary>
+        /// Configures additional deserializers to be considered when processing data bus properties. Can be called multiple times.
+        /// </summary>
+        public DataBusExtensions AddDeserializer<TSerializer>() where TSerializer : IDataBusSerializer, new()
+        {
+            var serializer = (TSerializer)Activator.CreateInstance(typeof(TSerializer));
+
+            Settings.Get<List<IDataBusSerializer>>(Features.DataBus.AdditionalDataBusDeserializersKey)
+                .Add(serializer);
+
+            return AddDeserializer(serializer);
+        }
+
+        /// <summary>
+        /// Configures additional deserializers to be considered when processing data bus properties. Can be called multiple times.
+        /// </summary>
+        public DataBusExtensions AddDeserializer<TSerializer>(TSerializer serializer) where TSerializer : IDataBusSerializer
+        {
+            Guard.AgainstNull(nameof(serializer), serializer);
+
+            Settings.Get<List<IDataBusSerializer>>(Features.DataBus.AdditionalDataBusDeserializersKey)
+                .Add(serializer);
+
+            return this;
         }
     }
 }
