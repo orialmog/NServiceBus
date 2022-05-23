@@ -50,9 +50,7 @@
                 throw new ArgumentException("The data bus serializer type needs to implement IDataBusSerializer.", nameof(dataBusSerializerType));
             }
 
-            config.Settings.Set(Features.DataBus.CustomDataBusTypeKey, dataBusType);
-
-            EnableDataBus(config, new CustomDataBus(), dataBusSerializerType);
+            EnableDataBus(config, new CustomDataBus(dataBusType), dataBusSerializerType);
 
             return new DataBusExtensions(config.Settings);
         }

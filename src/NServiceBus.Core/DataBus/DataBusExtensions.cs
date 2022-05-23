@@ -40,9 +40,6 @@
         {
             var serializer = (TSerializer)Activator.CreateInstance(typeof(TSerializer));
 
-            Settings.Get<List<IDataBusSerializer>>(Features.DataBus.AdditionalDataBusDeserializersKey)
-                .Add(serializer);
-
             return AddDeserializer(serializer);
         }
 

@@ -1,6 +1,7 @@
 namespace NServiceBus.Features
 {
     using System;
+    using System.Collections.Generic;
     using System.Threading;
     using System.Threading.Tasks;
     using Microsoft.Extensions.DependencyInjection;
@@ -28,14 +29,15 @@ namespace NServiceBus.Features
         /// </summary>
         protected internal override void Setup(FeatureConfigurationContext context)
         {
-            if (context.Container.HasComponent<IDataBusSerializer>())
+            if (context.Services.HasComponent<IDataBusSerializer>())
             {
-                throw new Exception("TODO");
+                throw new Exception("Providing custom data bus serializers are no longer supported via dependency injection.");
             }
 
-            var serializerType = context.Settings.Get<IDataBusSerializer>(DataBusSerializerTypeKey);
+            var serializerType = context.Settings.Get<Type>(DataBusSerializerTypeKey);
+            var additionalDeserializers = context.Settings.Get<List<IDataBusSerializer>>(AdditionalDataBusDeserializersKey);
 
-            context.Container.AddSingleton(serializerType);
+            context.Services.AddSingleton(typeof(IDataBusSerializer), serializerType);
 
             var conventions = context.Settings.Get<Conventions>();
 
@@ -45,13 +47,12 @@ namespace NServiceBus.Features
             {
                 return new DataBusReceiveBehavior(
                     b.GetRequiredService<IDataBus>(),
-                    new DataBusDeserializer(b.GetRequiredService<IDataBusSerializer>(), null),
+                    new DataBusDeserializer(b.GetRequiredService<IDataBusSerializer>(), additionalDeserializers),
                     conventions);
             }));
         }
 
         internal static string SelectedDataBusKey = "SelectedDataBus";
-        internal static string CustomDataBusTypeKey = "CustomDataBusType";
         internal static string DataBusSerializerTypeKey = "DataBusSerializerType";
         internal static string AdditionalDataBusDeserializersKey = "AdditionalDataBusDeserializers";
 

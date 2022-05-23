@@ -58,7 +58,12 @@
                 EndpointSetup<DefaultServer>(builder =>
                 {
                     var basePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "databus", "sender");
-                    builder.UseDataBus<FileShareDataBus, SystemJsonDataBusSerializer>().BasePath(basePath);
+#pragma warning disable CS0618
+                    builder.UseDataBus<FileShareDataBus, SystemJsonDataBusSerializer>()
+                    .BasePath(basePath)
+                    .AddDeserializer<BinaryFormatterDataBusSerializer>();
+#pragma warning restore CS0618
+
                     builder.RegisterMessageMutator(new Mutator());
                 });
             }
