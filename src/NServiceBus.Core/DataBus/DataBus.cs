@@ -34,26 +34,23 @@ namespace NServiceBus.Features
                 throw new Exception("Providing custom data bus serializers are no longer supported via dependency injection.");
             }
 
-            var serializerType = context.Settings.Get<Type>(DataBusSerializerTypeKey);
+            var serializer = context.Settings.Get<IDataBusSerializer>(DataBusSerializerKey);
             var additionalDeserializers = context.Settings.Get<List<IDataBusSerializer>>(AdditionalDataBusDeserializersKey);
-
-            context.Services.AddSingleton(typeof(IDataBusSerializer), serializerType);
-
             var conventions = context.Settings.Get<Conventions>();
 
             context.RegisterStartupTask(b => new DataBusInitializer(b.GetRequiredService<IDataBus>()));
-            context.Pipeline.Register(new DataBusSendBehavior.Registration(conventions));
+            context.Pipeline.Register(new DataBusSendBehavior.Registration(conventions, serializer));
             context.Pipeline.Register(new DataBusReceiveBehavior.Registration(b =>
             {
                 return new DataBusReceiveBehavior(
                     b.GetRequiredService<IDataBus>(),
-                    new DataBusDeserializer(b.GetRequiredService<IDataBusSerializer>(), additionalDeserializers),
+                    new DataBusDeserializer(serializer, additionalDeserializers),
                     conventions);
             }));
         }
 
         internal static string SelectedDataBusKey = "SelectedDataBus";
-        internal static string DataBusSerializerTypeKey = "DataBusSerializerType";
+        internal static string DataBusSerializerKey = "DataBusSerializer";
         internal static string AdditionalDataBusDeserializersKey = "AdditionalDataBusDeserializers";
 
         class DataBusInitializer : FeatureStartupTask

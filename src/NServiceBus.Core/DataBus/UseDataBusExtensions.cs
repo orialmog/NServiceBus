@@ -15,7 +15,7 @@
         /// <param name="config">The <see cref="EndpointConfiguration" /> instance to apply the settings to.</param>
         public static DataBusExtensions<TDataBus> UseDataBus<TDataBus, TDataBusSerializer>(this EndpointConfiguration config)
             where TDataBus : DataBusDefinition, new()
-            where TDataBusSerializer : IDataBusSerializer
+            where TDataBusSerializer : IDataBusSerializer, new()
         {
             Guard.AgainstNull(nameof(config), config);
 
@@ -57,8 +57,10 @@
 
         static void EnableDataBus(EndpointConfiguration config, DataBusDefinition selectedDataBus, Type dataBusSerializerType)
         {
+            var dataBusSerializer = (IDataBusSerializer)Activator.CreateInstance(dataBusSerializerType);
+
             config.Settings.Set(Features.DataBus.SelectedDataBusKey, selectedDataBus);
-            config.Settings.Set(Features.DataBus.DataBusSerializerTypeKey, dataBusSerializerType);
+            config.Settings.Set(Features.DataBus.DataBusSerializerKey, dataBusSerializer);
             config.Settings.Set(Features.DataBus.AdditionalDataBusDeserializersKey, new List<IDataBusSerializer>());
 
             config.EnableFeature<Features.DataBus>();
