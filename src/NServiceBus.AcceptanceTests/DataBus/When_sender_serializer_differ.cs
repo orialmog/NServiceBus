@@ -7,6 +7,7 @@
     using AcceptanceTesting.Customization;
     using EndpointTemplates;
     using MessageMutator;
+    using NServiceBus.DataBus;
     using NUnit.Framework;
 
     public class When_sender_serializer_differ : NServiceBusAcceptanceTest
@@ -42,9 +43,8 @@
                 EndpointSetup<DefaultServer>(builder =>
                 {
                     var basePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "databus", "sender");
-#pragma warning disable CS0618
-                    builder.UseDataBus<FileShareDataBus, BinaryFormatterDataBusSerializer>().BasePath(basePath);
-#pragma warning restore CS0618
+
+                    builder.UseDataBus<FileShareDataBus, MyCustomSerializer>().BasePath(basePath);
 
                     builder.ConfigureRouting().RouteToEndpoint(typeof(MyMessageWithLargePayload), typeof(Receiver));
                 });
@@ -58,11 +58,10 @@
                 EndpointSetup<DefaultServer>(builder =>
                 {
                     var basePath = Path.Combine(TestContext.CurrentContext.TestDirectory, "databus", "sender");
-#pragma warning disable CS0618
+
                     builder.UseDataBus<FileShareDataBus, SystemJsonDataBusSerializer>()
-                    .BasePath(basePath)
-                    .AddDeserializer<BinaryFormatterDataBusSerializer>();
-#pragma warning restore CS0618
+                        .BasePath(basePath)
+                        .AddDeserializer<MyCustomSerializer>();
 
                     builder.RegisterMessageMutator(new Mutator());
                 });
@@ -96,6 +95,22 @@
                     return Task.FromResult(0);
                 }
             }
+        }
+
+        class MyCustomSerializer : IDataBusSerializer
+        {
+            public void Serialize(object databusProperty, Stream stream)
+            {
+                new System.Xml.Serialization.XmlSerializer(databusProperty.GetType())
+                    .Serialize(stream, databusProperty);
+            }
+
+            public object Deserialize(Type propertyType, Stream stream)
+            {
+                return new System.Xml.Serialization.XmlSerializer(propertyType).Deserialize(stream);
+            }
+
+            public string ContentType => "xml";
         }
 
         public class MyMessageWithLargePayload : ICommand
