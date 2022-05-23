@@ -2,6 +2,7 @@
 {
     using System;
     using System.Collections.Generic;
+    using System.Linq;
     using Configuration.AdvancedExtensibility;
     using Settings;
 
@@ -50,8 +51,21 @@
         {
             Guard.AgainstNull(nameof(serializer), serializer);
 
-            Settings.Get<List<IDataBusSerializer>>(Features.DataBus.AdditionalDataBusDeserializersKey)
-                .Add(serializer);
+            var deserializers = Settings.Get<List<IDataBusSerializer>>(Features.DataBus.AdditionalDataBusDeserializersKey);
+
+            if (deserializers.Any(d => d.ContentType == serializer.ContentType))
+            {
+                throw new ArgumentException($"Deserializer for content type  {serializer.ContentType} already registered.");
+            }
+
+            var mainSerializer = Settings.Get<IDataBusSerializer>(Features.DataBus.DataBusSerializerKey);
+
+            if (mainSerializer.ContentType == serializer.ContentType)
+            {
+                throw new ArgumentException($"Main serializer already handles content typ {serializer.ContentType}.");
+            }
+
+            deserializers.Add(serializer);
 
             return this;
         }

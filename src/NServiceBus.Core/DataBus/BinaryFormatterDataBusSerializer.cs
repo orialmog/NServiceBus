@@ -35,7 +35,7 @@ namespace NServiceBus
         /// <summary>
         /// The name of this serializer. Used to populate the NServiceBus.Databus.Serializer header.
         /// </summary>
-        public string Name { get; } = "binary-formatter";
+        public string ContentType { get; } = "binary-formatter";
 
         static BinaryFormatter formatter = new BinaryFormatter();
     }

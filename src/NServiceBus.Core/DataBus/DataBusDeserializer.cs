@@ -14,12 +14,12 @@
         {
             deserializers = new Dictionary<string, IDataBusSerializer>
             {
-                { mainDeserializer.Name, mainDeserializer }
+                { mainDeserializer.ContentType, mainDeserializer }
             };
 
             foreach (var additionalDeserializer in additionalDeserializers)
             {
-                deserializers.Add(additionalDeserializer.Name, additionalDeserializer);
+                deserializers.Add(additionalDeserializer.ContentType, additionalDeserializer);
             }
         }
 
@@ -35,13 +35,13 @@
                     }
                     catch (Exception ex)
                     {
-                        logger.Info($"Failed to deserialize data bus property using the main {deserializerToTry.Name} serializer.", ex);
+                        logger.Info($"Failed to deserialize data bus property using the main {deserializerToTry.ContentType} serializer.", ex);
 
                         stream.Position = 0;
                     }
                 }
 
-                throw new Exception($"None of the configured serializers for {string.Join(",", deserializers.Keys)} where able to deserialize the data bus property.");
+                throw new Exception($"None of the configured serializers for {string.Join(", ", deserializers.Keys)} where able to deserialize the data bus property.");
             }
 
             if (!deserializers.TryGetValue(serializerUsed, out var deserializer))
