@@ -13,6 +13,13 @@ public static class ActivityTestingExtensions
         Assert.AreEqual(expectedValue, tagValue, $"Tag value with key '{tagName}' is incorrect");
     }
 
+    public static void VerifyTag<T>(this Activity activity, string tagName, T expectedValue)
+    {
+        var tags = activity.TagObjects.ToImmutableDictionary();
+        Assert.IsTrue(tags.TryGetValue(tagName, out var tagValue), $"Tags should contain key '{tagName}'");
+        Assert.AreEqual(tagValue, expectedValue, $"Tag value with key '{tagName}' is incorrect");
+    }
+
     /// <summary>
     /// Checks tags for duplicate tag keys.
     /// </summary>
