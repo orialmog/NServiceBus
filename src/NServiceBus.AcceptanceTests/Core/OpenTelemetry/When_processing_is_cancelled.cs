@@ -20,19 +20,16 @@ public class When_processing_is_cancelled : OpenTelemetryAcceptanceTest
             .WithEndpoint<CancellingEndpoint>(e => e
                 .DoNotFailOnErrorMessages()
                 .ToCreateInstance(
-                    config => Endpoint.Create(config),
+                    config => Endpoint.Create(config, cancellationTokenSource.Token),
                     endpoint => endpoint.Start(cancellationTokenSource.Token)
                 )
-                .When(session => session.SendLocal(new MessageThatWillBeCancelled()))
-                .When(
-                    ctx => ctx.MessageReceived,
-                    session =>
-                    {
-                        cancellationTokenSource.Cancel();
-                        return Task.CompletedTask;
-                    })
+                .When((session, ctx) =>
+                {
+                    ctx.CancellationTokenSource = cancellationTokenSource;
+                    return session.SendLocal(new MessageThatWillBeCancelled());
+                })
             )
-            .Done(ctx => cancellationTokenSource.IsCancellationRequested)
+            .Done(ctx => ctx.CancellationTokenSource.IsCancellationRequested)
             .Run();
 
         Activity cancelledPipelineActivity = NServicebusActivityListener.CompletedActivities.GetReceiveMessageActivities().Single();
@@ -59,8 +56,8 @@ public class When_processing_is_cancelled : OpenTelemetryAcceptanceTest
 
             public async Task Handle(MessageThatWillBeCancelled message, IMessageHandlerContext context)
             {
-                scenarioContext.MessageReceived = true;
-                await Task.Delay(TimeSpan.FromSeconds(120), context.CancellationToken);
+                scenarioContext.CancellationTokenSource.CancelAfter(TimeSpan.FromSeconds(1));
+                await Task.Delay(TimeSpan.FromSeconds(5), scenarioContext.CancellationTokenSource.Token);
             }
         }
     }
@@ -69,7 +66,7 @@ public class When_processing_is_cancelled : OpenTelemetryAcceptanceTest
 
     public class Context : ScenarioContext
     {
-        public bool MessageReceived { get; set; }
+        public CancellationTokenSource CancellationTokenSource { get; set; }
     }
 
 }
