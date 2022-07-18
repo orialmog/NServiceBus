@@ -3,6 +3,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using Features;
     using NUnit.Framework;
@@ -41,24 +42,18 @@
 
         public class EndpointWithAuditOff : EndpointFromTemplate<DefaultServer>
         {
-            public EndpointWithAuditOff()
+            public override void Customize(EndpointConfiguration endpointConfiguration, PublisherMetadata publisherMetadata)
             {
                 // Although the AuditProcessedMessagesTo seems strange here, this test tries to fake the scenario where
                 // even though the user has specified audit config, because auditing is explicitly turned
                 // off, no messages should be audited.
-                EndpointSetup(c =>
-                {
-                    c.DisableFeature<Audit>();
-                    c.AuditProcessedMessagesTo<EndpointThatHandlesAuditMessages>();
-                });
+                endpointConfiguration.DisableFeature<Audit>();
+                endpointConfiguration.AuditProcessedMessagesTo<EndpointThatHandlesAuditMessages>();
             }
 
             class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>
             {
-                public MessageToBeAuditedHandler(Context context)
-                {
-                    testContext = context;
-                }
+                public MessageToBeAuditedHandler(Context context) => testContext = context;
 
                 public Task Handle(MessageToBeAudited message, IMessageHandlerContext context)
                 {
@@ -72,7 +67,8 @@
 
         public class EndpointWithAuditOn : EndpointFromTemplate<DefaultServer>
         {
-            public EndpointWithAuditOn() => EndpointSetup(c => c.AuditProcessedMessagesTo<EndpointThatHandlesAuditMessages>());
+            public override void Customize(EndpointConfiguration endpointConfiguration, PublisherMetadata publisherMetadata) =>
+                endpointConfiguration.AuditProcessedMessagesTo<EndpointThatHandlesAuditMessages>();
 
             class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>
             {
