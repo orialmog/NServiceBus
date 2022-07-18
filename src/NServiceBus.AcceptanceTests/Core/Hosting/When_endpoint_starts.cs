@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using NUnit.Framework;
 
@@ -39,12 +40,12 @@
         {
         }
 
-        class MyEndpoint : EndpointConfigurationBuilder
+        class MyEndpoint : EndpointFromTemplate<DefaultServer>
         {
-            public MyEndpoint()
+            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
             {
-                EndpointSetup<DefaultServer>(c => c.SetDiagnosticsPath(basePath))
-                   .EnableStartupDiagnostics();
+                endpoint.SetDiagnosticsPath(basePath);
+                configuration.DisableStartupDiagnostics = false;
             }
         }
 

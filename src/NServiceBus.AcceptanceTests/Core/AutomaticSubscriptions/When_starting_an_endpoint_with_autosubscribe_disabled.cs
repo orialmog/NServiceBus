@@ -4,6 +4,7 @@
     using System.Collections.Concurrent;
     using System.Threading.Tasks;
     using AcceptanceTesting;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using Features;
     using NServiceBus.Pipeline;
@@ -30,13 +31,10 @@
 
         class Subscriber : EndpointFromTemplate<DefaultServer>
         {
-            public Subscriber()
+            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration)
             {
-                EndpointSetup(c =>
-                {
-                    c.DisableFeature<AutoSubscribe>();
-                    c.Pipeline.Register(typeof(SubscribeSpy), "Inspects all subscribe operations");
-                });
+                endpointConfiguration.DisableFeature<AutoSubscribe>();
+                endpointConfiguration.Pipeline.Register(typeof(SubscribeSpy), "Inspects all subscribe operations");
             }
 
             class SubscribeSpy : Behavior<ISubscribeContext>

@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
     using AcceptanceTesting;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using NServiceBus.Pipeline;
     using NUnit.Framework;
@@ -25,18 +26,15 @@
             public bool WasCalled { get; set; }
         }
 
-        public class Sender : EndpointConfigurationBuilder
+        public class Sender : EndpointFromTemplate<DefaultServer>
         {
-            public Sender()
+            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
             {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.Conventions().DefiningMessagesAs(t => t == typeof(MessageToBeDetectedByRootNodeName));
-                    c.Pipeline.Register(typeof(RemoveTheTypeHeader), "Removes the message type header to simulate receiving a native message");
-                    c.UseSerialization<XmlSerializer>();
-                })
-                //Need to include the message since it can't be nested inside the test class, see below
-                .IncludeType<MessageToBeDetectedByRootNodeName>();
+                endpoint.Conventions().DefiningMessagesAs(t => t == typeof(MessageToBeDetectedByRootNodeName));
+                endpoint.Pipeline.Register(typeof(RemoveTheTypeHeader), "Removes the message type header to simulate receiving a native message");
+                endpoint.UseSerialization<XmlSerializer>();
+
+                configuration.TypesToInclude.Add(typeof(MessageToBeDetectedByRootNodeName)); //Need to include the message since it can't be nested inside the test class, see below
             }
 
             public class MyMessageHandler : IHandleMessages<MessageToBeDetectedByRootNodeName>

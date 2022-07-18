@@ -4,6 +4,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using NUnit.Framework;
 
@@ -43,11 +44,8 @@
 
         public class Endpoint : EndpointFromTemplate<DefaultServer>
         {
-            public Endpoint() =>
-                EndpointSetup(config =>
-                {
-                    config.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), typeof(Receiver));
-                });
+            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration) =>
+                endpointConfiguration.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), typeof(Receiver));
         }
 
         public class Receiver : EndpointFromTemplate<DefaultServer>

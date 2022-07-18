@@ -24,7 +24,7 @@
         public string EndpointName
         {
             get => !string.IsNullOrEmpty(CustomEndpointName) ? CustomEndpointName : endpointName;
-            set => endpointName = value;
+            internal set => endpointName = value;
         }
 
         public Type BuilderType { get; set; }

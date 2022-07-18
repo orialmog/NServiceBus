@@ -6,38 +6,6 @@
     using Features;
     using Support;
 
-    public class EndpointFromTemplate<TTemplate> : IEndpointConfigurationFactory where TTemplate : IEndpointSetupTemplate, new()
-    {
-        public virtual void Customize(EndpointConfiguration endpointConfiguration, PublisherMetadata publisherMetadata)
-        {
-        }
-
-        public EndpointCustomizationConfiguration Get()
-        {
-            var configuration = new EndpointCustomizationConfiguration { BuilderType = GetType() };
-            configuration.GetConfiguration = async runDescriptor =>
-            {
-                var endpointSetupTemplate = new TTemplate();
-                var endpointConfiguration = await endpointSetupTemplate.GetConfiguration(runDescriptor, configuration, bc =>
-                {
-                    Customize(bc, configuration.PublisherMetadata);
-                    return Task.CompletedTask;
-                }).ConfigureAwait(false);
-
-                if (configuration.DisableStartupDiagnostics)
-                {
-                    endpointConfiguration.GetSettings().Set("NServiceBus.HostStartupDiagnostics", FeatureState.Disabled);
-                }
-
-                return endpointConfiguration;
-            };
-
-            return configuration;
-        }
-
-        public ScenarioContext ScenarioContext { get; set; }
-    }
-
     public class EndpointConfigurationBuilder : IEndpointConfigurationFactory
     {
         public EndpointConfigurationBuilder CustomMachineName(string customMachineName)
@@ -145,10 +113,8 @@
         }
 
 
-        EndpointCustomizationConfiguration IEndpointConfigurationFactory.Get()
-        {
-            return CreateScenario();
-        }
+        EndpointCustomizationConfiguration IEndpointConfigurationFactory.Get() => CreateScenario();
+
         public ScenarioContext ScenarioContext { get; set; }
 
 

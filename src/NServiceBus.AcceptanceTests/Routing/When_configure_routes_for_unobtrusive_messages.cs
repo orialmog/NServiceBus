@@ -3,6 +3,7 @@
     using System.Threading.Tasks;
     using AcceptanceTesting;
     using AcceptanceTesting.Customization;
+    using AcceptanceTesting.Support;
     using Configuration.AdvancedExtensibility;
     using EndpointTemplates;
     using NUnit.Framework;
@@ -27,17 +28,16 @@
             public bool ReceivedMessage { get; set; }
         }
 
-        public class SendingEndpointUsingRoutingApi : EndpointConfigurationBuilder
+        public class SendingEndpointUsingRoutingApi : EndpointFromTemplate<DefaultServer>
         {
-            public SendingEndpointUsingRoutingApi()
+            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
             {
-                EndpointSetup<DefaultServer>(c =>
-                {
-                    c.Conventions().DefiningCommandsAs(t => t == typeof(SomeCommand));
+                endpoint.Conventions().DefiningCommandsAs(t => t == typeof(SomeCommand));
 
-                    var routing = new RoutingSettings(c.GetSettings());
-                    routing.RouteToEndpoint(typeof(SomeCommand).Assembly, Conventions.EndpointNamingConvention(typeof(ReceivingEndpoint)));
-                }).ExcludeType<SomeCommand>(); //exclude type to simulate an unobtrusive message assembly which isn't automatically loaded.
+                var routing = new RoutingSettings(endpoint.GetSettings());
+                routing.RouteToEndpoint(typeof(SomeCommand).Assembly, Conventions.EndpointNamingConvention(typeof(ReceivingEndpoint)));
+
+                configuration.TypesToExclude.Add(typeof(SomeCommand)); //exclude type to simulate an unobtrusive message assembly which isn't automatically loaded.
             }
         }
 

@@ -2,6 +2,7 @@
 {
     using System.Threading.Tasks;
     using AcceptanceTesting;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using NUnit.Framework;
 
@@ -21,10 +22,8 @@
 
         public class UserEndpoint : EndpointFromTemplate<DefaultServer>
         {
-            public UserEndpoint()
-            {
-                EndpointSetup(c => c.AuditProcessedMessagesTo("audit_with_code_target"));
-            }
+            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration) =>
+                endpointConfiguration.AuditProcessedMessagesTo("audit_with_code_target");
 
             class Handler : IHandleMessages<MessageToBeAudited>
             {
@@ -35,13 +34,10 @@
             }
         }
 
-        public class AuditSpy : EndpointConfigurationBuilder
+        public class AuditSpy : EndpointFromTemplate<DefaultServer>
         {
-            public AuditSpy()
-            {
-                EndpointSetup<DefaultServer>()
-                    .CustomEndpointName("audit_with_code_target");
-            }
+            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration) =>
+                configuration.CustomEndpointName = "audit_with_code_target";
 
             class AuditMessageHandler : IHandleMessages<MessageToBeAudited>
             {
