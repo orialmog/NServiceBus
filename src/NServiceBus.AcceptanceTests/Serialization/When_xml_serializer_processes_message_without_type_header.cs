@@ -28,14 +28,15 @@
 
         public class Sender : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
+            protected override void CustomizeEndpoint(EndpointConfiguration endpoint)
             {
                 endpoint.Conventions().DefiningMessagesAs(t => t == typeof(MessageToBeDetectedByRootNodeName));
                 endpoint.Pipeline.Register(typeof(RemoveTheTypeHeader), "Removes the message type header to simulate receiving a native message");
                 endpoint.UseSerialization<XmlSerializer>();
-
-                configuration.TypesToInclude.Add(typeof(MessageToBeDetectedByRootNodeName)); //Need to include the message since it can't be nested inside the test class, see below
             }
+
+            protected override void CustomizeConfiguration(EndpointCustomizationConfiguration configuration) =>
+                configuration.TypesToInclude.Add(typeof(MessageToBeDetectedByRootNodeName)); //Need to include the message since it can't be nested inside the test class, see below
 
             public class MyMessageHandler : IHandleMessages<MessageToBeDetectedByRootNodeName>
             {

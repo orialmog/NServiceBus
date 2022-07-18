@@ -31,7 +31,7 @@
 
         class Subscriber : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration)
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration)
             {
                 endpointConfiguration.DisableFeature<AutoSubscribe>();
                 endpointConfiguration.Pipeline.Register(typeof(SubscribeSpy), "Inspects all subscribe operations");

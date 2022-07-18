@@ -42,11 +42,9 @@
 
         class MyEndpoint : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
-            {
-                endpoint.SetDiagnosticsPath(basePath);
-                configuration.DisableStartupDiagnostics = false;
-            }
+            protected override void CustomizeEndpoint(EndpointConfiguration endpoint) => endpoint.SetDiagnosticsPath(basePath);
+
+            protected override void CustomizeConfiguration(EndpointCustomizationConfiguration configuration) => configuration.DisableStartupDiagnostics = false;
         }
 
         class MyMessageHandler : IHandleMessages<MyMessage>

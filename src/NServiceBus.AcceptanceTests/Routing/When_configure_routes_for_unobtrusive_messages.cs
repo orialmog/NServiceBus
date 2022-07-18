@@ -30,15 +30,16 @@
 
         public class SendingEndpointUsingRoutingApi : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
+            protected override void CustomizeEndpoint(EndpointConfiguration endpoint)
             {
                 endpoint.Conventions().DefiningCommandsAs(t => t == typeof(SomeCommand));
 
                 var routing = new RoutingSettings(endpoint.GetSettings());
                 routing.RouteToEndpoint(typeof(SomeCommand).Assembly, Conventions.EndpointNamingConvention(typeof(ReceivingEndpoint)));
-
-                configuration.TypesToExclude.Add(typeof(SomeCommand)); //exclude type to simulate an unobtrusive message assembly which isn't automatically loaded.
             }
+
+            protected override void CustomizeConfiguration(EndpointCustomizationConfiguration configuration) =>
+                configuration.TypesToExclude.Add(typeof(SomeCommand)); //exclude type to simulate an unobtrusive message assembly which isn't automatically loaded.
         }
 
         public class ReceivingEndpoint : EndpointConfigurationBuilder

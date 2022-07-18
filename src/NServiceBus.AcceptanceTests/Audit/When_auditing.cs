@@ -42,7 +42,7 @@
 
         public class EndpointWithAuditOff : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration)
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration)
             {
                 // Although the AuditProcessedMessagesTo seems strange here, this test tries to fake the scenario where
                 // even though the user has specified audit config, because auditing is explicitly turned
@@ -67,7 +67,7 @@
 
         public class EndpointWithAuditOn : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration) =>
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration) =>
                 endpointConfiguration.AuditProcessedMessagesTo<EndpointThatHandlesAuditMessages>();
 
             class MessageToBeAuditedHandler : IHandleMessages<MessageToBeAudited>

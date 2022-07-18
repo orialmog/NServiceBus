@@ -22,7 +22,7 @@
 
         public class UserEndpoint : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration) =>
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration) =>
                 endpointConfiguration.AuditProcessedMessagesTo("audit_with_code_target");
 
             class Handler : IHandleMessages<MessageToBeAudited>
@@ -36,8 +36,7 @@
 
         public class AuditSpy : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration) =>
-                configuration.CustomEndpointName = "audit_with_code_target";
+            protected override void CustomizeConfiguration(EndpointCustomizationConfiguration configuration) => configuration.CustomEndpointName = "audit_with_code_target";
 
             class AuditMessageHandler : IHandleMessages<MessageToBeAudited>
             {

@@ -44,7 +44,7 @@
 
         public class Endpoint : EndpointFromTemplate<DefaultServer>
         {
-            protected override void Customize(EndpointConfiguration endpointConfiguration, EndpointCustomizationConfiguration configuration) =>
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration) =>
                 endpointConfiguration.ConfigureRouting().RouteToEndpoint(typeof(MyMessage), typeof(Receiver));
         }
 

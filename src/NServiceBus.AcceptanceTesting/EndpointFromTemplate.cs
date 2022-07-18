@@ -9,7 +9,15 @@
     {
         readonly EndpointCustomizationConfiguration configuration = new EndpointCustomizationConfiguration();
 
-        protected virtual void Customize(EndpointConfiguration endpoint, EndpointCustomizationConfiguration configuration)
+        protected virtual void CustomizeConfiguration(EndpointCustomizationConfiguration configuration)
+        {
+        }
+
+        protected virtual void CustomizeEndpoint(EndpointConfiguration endpointConfiguration)
+        {
+        }
+
+        protected virtual void ConfigurePublishers(PublisherMetadata publisherMetadata)
         {
         }
 
@@ -18,10 +26,11 @@
             configuration.BuilderType = GetType();
             configuration.GetConfiguration = async runDescriptor =>
             {
+                CustomizeConfiguration(configuration);
                 var endpointSetupTemplate = new TTemplate();
                 var endpointConfiguration = await endpointSetupTemplate.GetConfiguration(runDescriptor, configuration, bc =>
                 {
-                    Customize(bc, configuration);
+                    CustomizeEndpoint(bc);
                     return Task.CompletedTask;
                 }).ConfigureAwait(false);
 
@@ -32,6 +41,7 @@
 
                 return endpointConfiguration;
             };
+            ConfigurePublishers(configuration.PublisherMetadata);
 
             return configuration;
         }

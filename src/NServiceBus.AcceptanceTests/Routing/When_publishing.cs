@@ -3,6 +3,7 @@
     using System;
     using System.Threading.Tasks;
     using AcceptanceTesting;
+    using AcceptanceTesting.Support;
     using EndpointTemplates;
     using Features;
     using NUnit.Framework;
@@ -136,13 +137,11 @@
             }
         }
 
-        public class Subscriber3 : EndpointConfigurationBuilder
+        public class Subscriber3 : EndpointFromTemplate<DefaultServer>
         {
-            public Subscriber3()
-            {
-                EndpointSetup<DefaultServer>(c => c.DisableFeature<AutoSubscribe>(),
-                    metadata => metadata.RegisterPublisherFor<IFoo>(typeof(Publisher3)));
-            }
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration) => endpointConfiguration.DisableFeature<AutoSubscribe>();
+
+            protected override void ConfigurePublishers(PublisherMetadata publisherMetadata) => publisherMetadata.RegisterPublisherFor<IFoo>(typeof(Publisher3));
 
             public class MyHandler : IHandleMessages<IFoo>
             {
@@ -161,13 +160,13 @@
             }
         }
 
-        public class Subscriber1 : EndpointConfigurationBuilder
+        public class Subscriber1 : EndpointFromTemplate<DefaultServer>
         {
-            public Subscriber1()
-            {
-                EndpointSetup<DefaultServer>(c => c.DisableFeature<AutoSubscribe>(),
-                     metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
-            }
+            protected override void CustomizeEndpoint(EndpointConfiguration endpointConfiguration) =>
+                endpointConfiguration.DisableFeature<AutoSubscribe>();
+
+            protected override void ConfigurePublishers(PublisherMetadata publisherMetadata) =>
+                publisherMetadata.RegisterPublisherFor<MyEvent>(typeof(Publisher));
 
             public class MyHandler : IHandleMessages<MyEvent>
             {
@@ -189,11 +188,9 @@
 
         public class Subscriber2 : EndpointConfigurationBuilder
         {
-            public Subscriber2()
-            {
+            public Subscriber2() =>
                 EndpointSetup<DefaultServer>(c => c.DisableFeature<AutoSubscribe>(),
                     metadata => metadata.RegisterPublisherFor<MyEvent>(typeof(Publisher)));
-            }
 
             public class MyHandler : IHandleMessages<MyEvent>
             {
